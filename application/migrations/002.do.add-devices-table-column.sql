@@ -1,0 +1,2 @@
+ALTER TABLE IF EXISTS devices
+ADD COLUMN priority_group INTEGER DEFAULT 0;

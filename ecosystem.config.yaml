@@ -1,0 +1,3 @@
+apps:
+  - name : 'deye-worker'
+    script: 'invertor-worker/app/server/worker.py'
