@@ -1,3 +1,5 @@
 apps:
-  - name : 'deye-worker'
+  - name : 'invertor-worker'
     script: 'invertor-worker/app/server/worker.py'
+  - name : 'app'
+    script: 'application/server.mjs'

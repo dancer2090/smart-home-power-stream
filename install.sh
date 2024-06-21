@@ -61,3 +61,8 @@ apt install python3.11 -y
 apt install python3-pip -y
 apt install cmake -y
 apt install python3.11-venv -y
+
+pip install pysolarmanv5 --break-system-packages
+pip install paho-mqtt --break-system-packages
+pip install schedule --break-system-packages
+pip install PyYaml --break-system-packages
