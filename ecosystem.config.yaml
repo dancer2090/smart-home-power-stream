@@ -1,5 +1,5 @@
 apps:
   - name : 'invertor-worker'
-    script: 'invertor-worker/app/server/worker.py'
+    script: '/root/smart-home/invertor-worker/app/server/worker.py'
   - name : 'app'
-    script: 'application/server.mjs'
+    script: '/root/smart-home/application/server.mjs'

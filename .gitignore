@@ -4,3 +4,4 @@ volumes/
 .env
 .env.production
 smart-home.zip
+venv/

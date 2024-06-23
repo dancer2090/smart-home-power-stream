@@ -2,7 +2,6 @@
 export NODE_ENV=production
 cd application
 npm i
-npm run migrate
 
 cd ../invertor-worker
 pip install -r requirements.txt --break-system-packages
