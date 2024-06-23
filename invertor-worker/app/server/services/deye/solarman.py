@@ -72,7 +72,6 @@ class Inverter:
         requests = self.parameter_definition['requests']
         log.debug(f"Starting to query for [{len(requests)}] ranges...")
         try:
-
             for request in requests:
                 start = request['start']
                 end = request['end']

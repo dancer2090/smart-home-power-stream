@@ -1,6 +1,6 @@
 # Press the green button in the gutter to run the script.
 from services.deye import Inverter
-from constants import LOGGER_SN, INVERTER_IP, LOGGER_PORT, REGISTERS_FILENAME_PATH, REGISTERS_FILENAME, MQTT_HOST
+from constants import LOGGER_SN, LOGGER_IP, LOGGER_PORT, REGISTERS_FILENAME_PATH, REGISTERS_FILENAME, MQTT_HOST
 from services.mqtt import MQTT
 import schedule, time
 import datetime
@@ -44,7 +44,7 @@ class ScanInverterLogger:
 
 
 def main():
-    scan_inv = ScanInverterLogger(INVERTER_IP, LOGGER_SN)
+    scan_inv = ScanInverterLogger(LOGGER_IP, LOGGER_SN)
     schedule.every(5).seconds.do(scan_inv.scan)
 
     while True:
