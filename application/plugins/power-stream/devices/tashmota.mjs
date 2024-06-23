@@ -10,7 +10,11 @@ class Tashmota {
 
   setDevices = (devices = []) => {
     devices.map(device => {
-      this.devices[device.device_name] = new Device(device.device_name, device.max_power)
+      this.devices[device.device_name] = new Device(
+        device.device_name,
+        device.max_power,
+        device.priority_group
+      )
     })
   }
 
@@ -48,6 +52,15 @@ class Tashmota {
       const total = arr + (energy?.Power ?? 0)
       return total
     }, 0)
+  }
+
+  getDevicesByPriorityGroup = (priority_group) => {
+    return Object.keys(this.devices).reduce((arr, key) => {
+      if (this.devices[key].priority_group === priority_group) {
+        arr[key] = this.devices[key]
+      }
+      return arr
+    }, {})
   }
 }
 

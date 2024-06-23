@@ -1,9 +1,10 @@
 class Device {
-  constructor(id, max_power = 0) {
+  constructor(id, max_power = 0, priority_group = 0) {
     this.id = id
     this.energy = null
     this.energy_last_update_time = 0
     this.max_power = max_power
+    this.priority_group = priority_group
     this.autoreset()
   }
 

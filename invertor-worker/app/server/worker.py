@@ -1,5 +1,5 @@
 # Press the green button in the gutter to run the script.
-from services.deye import Inverter
+from services.deye.solarman import Inverter
 from constants import LOGGER_SN, LOGGER_IP, LOGGER_PORT, REGISTERS_FILENAME_PATH, REGISTERS_FILENAME, MQTT_HOST
 from services.mqtt import MQTT
 import schedule, time
@@ -48,8 +48,14 @@ def main():
     schedule.every(5).seconds.do(scan_inv.scan)
 
     while True:
-        schedule.run_pending()
-        time.sleep(1)
+        try:
+            schedule.run_pending()
+            time.sleep(1)
+        except Exception as e:
+            print(e)
+            print('restart')
+            schedule.run_pending()
+            time.sleep(1)
 
 
 if __name__ == '__main__':

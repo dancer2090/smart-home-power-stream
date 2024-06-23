@@ -1,1 +1,1 @@
-from .solarman import Inverter
+from .solarman import *

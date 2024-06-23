@@ -55,6 +55,7 @@ class PowerStream {
       const is_used_battery = this.inverter.params[PARAM_BATTERY_STATUS].value !== BATTERY_CHARGE
       const load = this.inverter.params[PARAM_LOAD_POWER].value
 
+      const devices_group2 = this.sockets.getDevicesByPriorityGroup(2)
       console.table({ potential, is_grid, load, pv_power, is_used_battery })
       
       // Priority 0 - on every time
@@ -69,9 +70,13 @@ class PowerStream {
       // Priority 2 - включен в дневное время суток если есть энергия хотя бы 1 кВт, сеть включена
       // Бойлер
       if (is_grid && (potential - load) > 1000) {
-        // for devices with priority 2
-        // this.mqtt.publish()
-        // return
+        Object.keys(devices_group2).map(key => {
+          this.mqtt.publish(`mqtt/${devices_group2[key].id}/cmnd/Power`, '1')
+        })
+      } else {
+        Object.keys(devices_group2).map(key => {
+          this.mqtt.publish(`mqtt/${devices_group2[key].id}/cmnd/Power`, '0')
+        })
       }
 
       // Priority 3 - включен в дневное время суток если есть энергия солнца хотя бы 500 Вт
