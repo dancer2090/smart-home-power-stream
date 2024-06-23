@@ -1,7 +1,13 @@
 import MQTT from '../../lib/mqtt-sh.mjs';
-import Inverter, { PARAM_PV_POWER_POTENTIAL, PARAM_GRID_STATUS, ON_GRID, PARAM_LOAD_POWER } from './devices/inverter.mjs';
+import Inverter, {
+  PARAM_PV_POWER_POTENTIAL,
+  PARAM_GRID_STATUS, ON_GRID,
+  PARAM_LOAD_POWER,
+  PARAM_PV_POWER,
+  PARAM_BATTERY_STATUS,
+  BATTERY_CHARGE,
+} from './devices/inverter.mjs';
 import Tashmota from './devices/tashmota.mjs'
-import { MQTT_HOST, MQTT_PORT } from '../../constants.mjs'
 
 class PowerStream {
   constructor(pg) {
@@ -44,10 +50,12 @@ class PowerStream {
         five: false
       }
       const potential = this.inverter.params[PARAM_PV_POWER_POTENTIAL].value
+      const pv_power = this.inverter.params[PARAM_PV_POWER].value
       const is_grid = this.inverter.params[PARAM_GRID_STATUS].value === ON_GRID
+      const is_used_battery = this.inverter.params[PARAM_BATTERY_STATUS].value !== BATTERY_CHARGE
       const load = this.inverter.params[PARAM_LOAD_POWER].value
 
-      console.log(potential, is_grid, load)
+      console.table({ potential, is_grid, load, pv_power, is_used_battery })
       
       // Priority 0 - on every time
       // Priority 1 - включен всегда, если есть энергия (либо grid, либо солнце)
@@ -85,7 +93,7 @@ class PowerStream {
   init = () => {
     this.syncDb()
     this.smartControl()
-    this.mqtt = new MQTT(MQTT_HOST, MQTT_PORT, this.on_message)
+    this.mqtt = new MQTT(process.env.MQTT_HOST, process.env.MQTT_PORT, this.on_message)
     this.mqtt.init()
   }
 

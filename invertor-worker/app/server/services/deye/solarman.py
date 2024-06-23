@@ -48,11 +48,9 @@ class Inverter:
         length = end - start + 1
         match mb_fc:
             case 3:
-                response  = self._modbus.read_holding_registers(register_addr=start, quantity=length)
-                # print(params, start, length, response)
+                response = self._modbus.read_holding_registers(register_addr=start, quantity=length)
             case 4:
-                response  = self._modbus.read_input_registers(register_addr=start, quantity=length)
-                # print(response)
+                response = self._modbus.read_input_registers(register_addr=start, quantity=length)
         params.parse(response, start, length)
 
 
@@ -71,9 +69,10 @@ class Inverter:
     def get_statistics(self):
         result = 1
         params = ParameterParser(self.parameter_definition)
+        print(params)
         requests = self.parameter_definition['requests']
         log.debug(f"Starting to query for [{len(requests)}] ranges...")
-
+        print(requests)
         try:
 
             for request in requests:

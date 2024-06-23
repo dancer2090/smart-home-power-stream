@@ -1,15 +1,13 @@
 #!/bin/bash 
+export NODE_ENV=production
 cd application
 npm i
 npm run migrate
 
+cd ../invertor-worker
+pip install -r requirements.txt --break-system-packages
+
 cd ../
-
-pip install pysolarmanv5 --break-system-packages
-pip install paho-mqtt --break-system-packages
-pip install schedule --break-system-packages
-pip install PyYAML --break-system-packages
-
 
 pm2 start ./ecosystem.config.yaml
 pm2 startup
