@@ -1,5 +1,5 @@
 #!/bin/bash 
-rm smart-home.sh
+rm smart-home.zip
 zip -r ./smart-home.zip ./ \
  -x "application/node_modules/*" \
  -x "docker-compose.yaml" \

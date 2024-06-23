@@ -10,8 +10,8 @@ $$ language 'plpgsql';
 
 CREATE TABLE IF NOT EXISTS devices (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  device_type CHARACTER(20) NOT NULL DEFAULT '',
-  device_name CHARACTER(100) UNIQUE NOT NULL DEFAULT '',
+  device_type VARCHAR(20) NOT NULL DEFAULT '',
+  device_name VARCHAR(100) UNIQUE NOT NULL DEFAULT '',
   max_power INTEGER NOT NULL DEFAULT 0,
   active_status BOOLEAN NOT NULL DEFAULT 'f',
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

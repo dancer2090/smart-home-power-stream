@@ -1,9 +1,6 @@
 import pg from 'pg';
 import Postgrator from 'postgrator';
 import path from 'node:path';
-import parseArgs from 'minimist';
-
-const argv = parseArgs(process.argv.slice(2));
 
 async function migrate() {
   const client = new pg.Client({
@@ -16,9 +13,8 @@ async function migrate() {
 
   try {
     await client.connect();
-
     const postgrator = new Postgrator({
-      migrationPattern: path.join(process.cwd(), '/migrations/*'),
+      migrationPattern: path.join(process.cwd(), '/application/migrations/*'),
       driver: 'pg',
       database: process.env.DB_NAME,
       schemaTable: 'migrations',
@@ -27,12 +23,7 @@ async function migrate() {
     });
 
     let result;
-    if (argv?.version) {
-      console.log(argv?.version)
-      result = await postgrator.migrate(argv?.version.toString())
-    } else {
-      result = await postgrator.migrate()
-    }    
+    result = await postgrator.migrate('002')
 
     if (result.length === 0) {
       console.log(
