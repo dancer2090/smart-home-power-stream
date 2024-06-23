@@ -69,10 +69,8 @@ class Inverter:
     def get_statistics(self):
         result = 1
         params = ParameterParser(self.parameter_definition)
-        print(params)
         requests = self.parameter_definition['requests']
         log.debug(f"Starting to query for [{len(requests)}] ranges...")
-        print(requests)
         try:
 
             for request in requests:

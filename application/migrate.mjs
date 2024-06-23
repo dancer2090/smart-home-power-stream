@@ -3,17 +3,15 @@ import Postgrator from 'postgrator';
 import path from 'node:path';
 import parseArgs from 'minimist';
 
-import { DB_HOST, DB_PORT, DB_PASSWORD, DB_USER, DB_NAME } from './constants.mjs'
-
 const argv = parseArgs(process.argv.slice(2));
 
 async function migrate() {
   const client = new pg.Client({
-    host: DB_HOST,
-    port: DB_PORT,
-    database: DB_NAME, 
-    user: DB_USER,
-    password: DB_PASSWORD,
+    host: process.env.DB_HOST,
+    port: process.env.DB_PORT,
+    database: process.env.DB_NAME, 
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
   });
 
   try {
@@ -22,7 +20,7 @@ async function migrate() {
     const postgrator = new Postgrator({
       migrationPattern: path.join(process.cwd(), '/migrations/*'),
       driver: 'pg',
-      database: DB_NAME,
+      database: process.env.DB_NAME,
       schemaTable: 'migrations',
       currentSchema: 'public', // Postgres and MS SQL Server only
       execQuery: (query) => client.query(query),
@@ -53,4 +51,4 @@ async function migrate() {
   await client.end()
 }
 
-migrate()
+export default migrate

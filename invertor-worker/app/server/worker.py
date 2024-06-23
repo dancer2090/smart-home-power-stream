@@ -44,7 +44,6 @@ class ScanInverterLogger:
 
 
 def main():
-    print(INVERTER_IP, LOGGER_SN, MQTT_HOST)
     scan_inv = ScanInverterLogger(INVERTER_IP, LOGGER_SN)
     schedule.every(5).seconds.do(scan_inv.scan)
 

@@ -15,8 +15,7 @@ load_dotenv(dotenv_path=dotenv_path)
 
 LOGGER_SN = os.getenv('LOGGER_SN')
 INVERTER_IP = os.getenv('INVERTER_IP')
-# REGISTERS_FILENAME = 'deye_hybrid.yaml'
-REGISTERS_FILENAME = 'deye_2mppt.yaml'
+REGISTERS_FILENAME = 'deye_hybrid.yaml'
 REGISTERS_FILENAME_PATH = f'{cwd}/invertor-worker/app/server/services/deye/'
 LOGGER_PORT = 8899
 
