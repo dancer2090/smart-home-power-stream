@@ -28,13 +28,13 @@ class PowerStream {
         const item = this.sockets.devices[device]
         const str = `
           INSERT INTO devices (device_type, device_name, max_power, active_status, device_ip)
-          VALUES ('socket', '${item.id}', ${item.max_power}, ${item.getValue() > 0 ? true : false}, '${item.device_ip}')
+          VALUES ('socket', '${item.id}', ${item.max_power}, ${item.active_status}, '${item.device_ip}')
           ON CONFLICT (device_name)
           DO UPDATE SET 
           device_type = 'socket',
           max_power = ${item.max_power},
-          device_ip = '${item.device_ip}',
-          active_status = ${item.getValue() > 0 ? true : false} 
+          active_status = ${item.active_status},
+          device_ip = '${item.device_ip}'
         `;
         this.pg.query(str)
       })
@@ -66,19 +66,29 @@ class PowerStream {
         // Priority 2 - включен в дневное время суток если есть энергия хотя бы 1 кВт от Солнца, сеть включена
         // Бойлер
         // Тут желательно понимать будет ли 1 кВт вообще в облачную погоду. Пока под вопросом.
-        if ((potential - load) > 1000) {
-          Object.keys(devices_group2).map(key => {
+        
+        Object.keys(devices_group2).map(key => {
+          // on device
+          if (
+            (potential - load) > devices_group2[key].max_power * 0.33
+          )
+          {
             devices_group2[key].start(() => {
               this.mqtt.publish(`mqtt/${devices_group2[key].id}/cmnd/Power`, '1')
             })
-          })
-        } else {
-          Object.keys(devices_group2).map(key => {
+          }
+
+          // off device
+          if (
+            (potential - load) < devices_group2[key].max_power * 0.66 * -1 &&
+            devices_group2[key].active_power !== 0
+          ) 
+          {
             devices_group2[key].stop(() => {
               this.mqtt.publish(`mqtt/${devices_group2[key].id}/cmnd/Power`, '0')
             })
-          })
-        }
+          }
+        })
       }
 
       if (!is_grid) {
@@ -94,16 +104,15 @@ class PowerStream {
         // Тут можно сделать скидку на мощность, если хорошие аккумы и ставить формулу. Пока в работе
         // (potential - load) > (devices_group1[key].max_power - 1000). 1 кВт  с аккумов берем.
         Object.keys(devices_group1).map(key => {
-          if ((potential - load) > devices_group1[key].max_power && !is_used_battery) {
-            devices_group1[key].start(() => {
-              this.mqtt.publish(`mqtt/${devices_group1[key].id}/cmnd/Power`, '1')
-            })
-          } else {
-            devices_group1[key].start(() => {
-              this.mqtt.publish(`mqtt/${devices_group1[key].id}/cmnd/Power`, '-')
-            })
-          }
-          
+          devices_group1[key].stop(() => {
+            this.mqtt.publish(`mqtt/${devices_group1[key].id}/cmnd/Power`, '0')
+          })
+        })
+
+        Object.keys(devices_group2).map(key => {
+          devices_group2[key].stop(() => {
+            this.mqtt.publish(`mqtt/${devices_group2[key].id}/cmnd/Power`, '0')
+          })
         })
       }
 
