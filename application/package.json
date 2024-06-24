@@ -12,8 +12,12 @@
   "dependencies": {
     "@fastify/env": "^4.3.0",
     "@fastify/postgres": "^5.2.2",
+    "@fastify/websocket": "^10.0.1",
     "fastify": "^4.28.0",
+    "graphql": "^16.9.0",
+    "graphql-ws": "^5.16.0",
     "JSONStream": "^1.3.5",
+    "mercurius": "^14.1.0",
     "mqtt": "^5.7.0",
     "pg": "^8.12.0",
     "pg-query-stream": "^4.6.0",

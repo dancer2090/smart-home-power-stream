@@ -43,6 +43,7 @@ class PowerStream {
 
   smartControl = () => {
     setInterval(() => {
+      if (process.env.ACTIVE_STREAM === 'false') return;
       const potential = this.inverter.params[PARAM_PV_POWER_POTENTIAL].value
       const pv_power = this.inverter.params[PARAM_PV_POWER].value
       const is_grid = this.inverter.params[PARAM_GRID_STATUS].value === ON_GRID
@@ -81,6 +82,7 @@ class PowerStream {
           // off device
           if (
             (potential - load) < devices_group2[key].max_power * 0.66 * -1 &&
+            devices_group2[key].active_status === true &&
             devices_group2[key].active_power !== 0
           ) 
           {

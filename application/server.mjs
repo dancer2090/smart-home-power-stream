@@ -5,8 +5,8 @@ import appFramework from './app.mjs'
   const app = await appFramework();
   try {
     await app.listen({
-      port: app.config.HTTP_PORT,
-      host: app.config.HTTP_HOST,
+      port: process.env.APP_PORT,
+      host: process.env.APP_HOST,
     });
   } catch (err) {
     app.log.error(err);

@@ -46,5 +46,9 @@ export const schema = {
       type: 'string',
       default: '1883'
     },
+    ACTIVE_STREAM: {
+      type: 'boolean',
+      default: false,
+    },
   }
 }

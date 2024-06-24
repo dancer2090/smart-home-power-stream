@@ -1,12 +1,12 @@
 import fastifyPlugin from "fastify-plugin";
 
-async function indexRoutes(server, options) {
-  server.get("/", async (request, reply) => {
-    return {
-      hello: "hello world",
-      debugLevel: server.config.DEBUG_LEVEL,
-    };
-  });
+async function indexRoutes(fastify, options) {
+  
+  fastify.get('/', async function (req, reply) {
+
+    const query = '{ add(x: 2, y: 2) }'
+    return reply.graphql(query)
+  })
 }
 
 export default fastifyPlugin(indexRoutes);
