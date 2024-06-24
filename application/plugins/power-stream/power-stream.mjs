@@ -1,7 +1,9 @@
 import MQTT from '../../lib/mqtt-sh.mjs';
 import Inverter, {
   PARAM_PV_POWER_POTENTIAL,
-  PARAM_GRID_STATUS, ON_GRID,
+  PARAM_GRID_STATUS,
+  ON_GRID,
+  PARAM_GRID_POWER,
   PARAM_LOAD_POWER,
   PARAM_PV_POWER,
   PARAM_BATTERY_STATUS,
@@ -20,6 +22,37 @@ class PowerStream {
   initDevices = async () => {
     const query = await this.pg.query('SELECT * FROM devices');
     if (query) this.sockets.setDevices(query.rows)
+  }
+
+  getInvertor = async () => {
+    const ip = process.env.LOGGER_IP
+    const pv_potential = this.inverter.params[PARAM_PV_POWER_POTENTIAL].value
+    const pv_power = this.inverter.params[PARAM_PV_POWER].value
+    const grid_status = this.inverter.params[PARAM_GRID_STATUS].value === ON_GRID
+    const grid_load = this.inverter.params[PARAM_GRID_POWER].value
+    const load = this.inverter.params[PARAM_LOAD_POWER].value
+
+    return {
+      ip,
+      pv_power,
+      pv_potential,
+      load,
+      grid_status,
+      grid_load,
+    }
+  }
+
+  getDevices = async () => {
+    // const query = await this.pg.query('SELECT * FROM devices');   
+    return Object.keys(this.sockets.devices).map(device => ({
+      id: this.sockets.devices[device].id,
+      device_name: this.sockets.devices[device].device_name,
+      device_ip: this.sockets.devices[device].device_ip,
+      active_power: this.sockets.devices[device].active_power,
+      active_status: this.sockets.devices[device].active_status,
+      max_power: this.sockets.devices[device].max_power,
+      priority_group: this.sockets.devices[device].priority_group,
+    }))
   }
 
   syncDb = () => {
@@ -86,7 +119,7 @@ class PowerStream {
             devices_group2[key].active_power !== 0
           ) 
           {
-            devices_group2[key].stop(() => {
+            devices_group2[key].stopWithGrid(() => {
               this.mqtt.publish(`mqtt/${devices_group2[key].id}/cmnd/Power`, '0')
             })
           }

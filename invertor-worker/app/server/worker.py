@@ -45,7 +45,7 @@ class ScanInverterLogger:
 
 def main():
     scan_inv = ScanInverterLogger(LOGGER_IP, LOGGER_SN)
-    schedule.every(5).seconds.do(scan_inv.scan)
+    schedule.every(2).seconds.do(scan_inv.scan)
 
     while True:
         try:

@@ -1,31 +1,16 @@
 // Import the framework and instantiate it
 import Fastify from 'fastify'
 import fastifyPostgres from '@fastify/postgres'
+import fastifyStatic from '@fastify/static'
 import fastifyEnv from '@fastify/env'
-import fastifyWebsocket from '@fastify/websocket';
-import { makeHandler } from 'graphql-ws/lib/use/@fastify/websocket';
+import cors from '@fastify/cors'
 import mercurius from 'mercurius'
 import fastifyRoutes from './routes/index.mjs'
-import PowerStreamPlugin from './plugins/power-stream/index.mjs'
+import { PowerStreamApp } from './plugins/power-stream/index.mjs'
 import Migrate from './migrate.mjs'
 import { schema } from './constants.mjs'
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-const getDevices = () => {
-  return [
-    {
-      id: 'string',
-      device_name: 'string',
-      device_type: 'string',
-      device_ip: 'string',
-      max_power: 'interger',
-      active_status: 'boolean',
-      priority_group: 'boolean',
-      device_ip: 'string',
-    }
-  ]
-}
+import path, { dirname } from 'path';
 
 const schemaMerc = `
   type Device {
@@ -35,20 +20,30 @@ const schemaMerc = `
     device_ip: String
     max_power: Int
     active_status: Boolean
-    priority_group: Boolean
+    priority_group: Int
+    active_power: Int
+  }
+
+  type Invertor {
+    id: ID
+    ip: String
+    pv_power: Int
+    pv_potential: Int
+    load: Int
+    grid_load: Int
+    grid_status: Boolean
   }
 
   type Query {
     devices: [Device]!
+    invertor: Invertor!
   }
 
 `
 
 const resolvers = {
   Query: {
-    devices: async () => {
-      return getDevices()
-    }
+    devices: async () => {}
   }
 }
 
@@ -61,6 +56,9 @@ export default async function appFramework() {
   const fastify = Fastify({
     logger: true
   })
+  
+  await fastify.register(cors)
+
   await fastify.register(
     fastifyEnv,
     { 
@@ -70,6 +68,12 @@ export default async function appFramework() {
       } : true
     }
   )
+
+  fastify.register(fastifyStatic, {
+    root: path.join(__dirname, 'public'),
+    prefix: '/public/', // optional: default '/'
+  })
+  
 
   await fastify.register(fastifyPostgres, {
     host: process.env.DB_HOST,
@@ -81,25 +85,27 @@ export default async function appFramework() {
 
   await Migrate()
 
-  fastify.register(PowerStreamPlugin)
 
-  fastify.register(fastifyWebsocket, {
-    options: {
-      maxPayload: 1048576
-    }
-  })
+  // await fastify.register(PowerStreamPlugin)
+
+
+  // console.log(fastify)
+  const stream = PowerStreamApp(fastify.pg)
+
+  resolvers.Query.devices = async () => {
+    const devices = await stream.getDevices()
+    return devices;
+  }
+  resolvers.Query.invertor = async () => {
+    const invertor = await stream.getInvertor()
+    return invertor;
+  }
 
   fastify.register(mercurius, {
     schema: schemaMerc,
     resolvers,
     graphiql: true,
     subscription: true,
-  })
-
-  fastify.get('/subscription', { websocket: true }, (connection, req) => {
-    connection.socket.on('message', message => {
-      connection.socket.send('hi from server')
-    })
   })
 
   fastify.register(fastifyRoutes)

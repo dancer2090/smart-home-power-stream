@@ -8,8 +8,11 @@ class Device {
     this.startTime = null
     this.stopTime = null
     this.device_ip = device_ip
+    this.device_name = id
     this.active_status = false
     this.active_power = 0
+
+    this.offDelayInteval = 5 * 60 * 1000
     
     this.autoreset()
   }
@@ -73,18 +76,36 @@ class Device {
 
   start = (callback = () => {}) => {
     if (
-      (this.currentTimestamp() - this.startTime) > 5 * 60 * 1000
-      && this.active_power === 0
+      (this.currentTimestamp() - this.startTime) > 1 * 60 * 1000
     ) {
       callback()
+      this.startTime = this.currentTimestamp()
     }
-    this.startTime = this.currentTimestamp()
+  }
+
+  offDelay = () => {
+    return (this.currentTimestamp() - this.startTime) > this.offDelayInteval
+  }
+
+  stopWithGrid = () => {
+    // set 5 min delay if on
+    if (
+      (this.currentTimestamp() - this.stopTime) > 5 * 1000 &&
+      this.offDelay
+    )
+    {
+      callback()
+      this.stopTime = this.currentTimestamp()
+    }
   }
 
   stop = (callback = () => {}) => {
-    this.stopTime = this.currentTimestamp()
-    if ((this.currentTimestamp() - this.startTime) > 5 * 1000) { // 5 sec
+    if (
+      (this.currentTimestamp() - this.stopTime) > 5 * 1000
+    ) 
+      {
       callback()
+      this.stopTime = this.currentTimestamp()
     }
   }
 }

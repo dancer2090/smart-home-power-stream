@@ -17,24 +17,33 @@ class Tashmota {
         device.ip
       )
     })
+    this.checkIPs()    
+    this.checkPowers()    
   }
 
   ping = () => {
     if (this.on_publish) {
       // check power
       setInterval(() => {
-        Object.keys(this.devices).map((key) => {
-          this.on_publish(`mqtt/${key}/cmnd/STATUS`, '10')
-        })
+        this.checkPowers()
       }, 10000)
 
       // check IP address
       setInterval(() => {
-        Object.keys(this.devices).map((key) => {
-          this.on_publish(`mqtt/${key}/cmnd/STATUS`, '5')
-        })
+        this.checkIPs()
       }, 30 * 60 * 1000)
     }    
+  }
+
+  checkPowers = () => {
+    Object.keys(this.devices).map((key) => {
+      this.on_publish(`mqtt/${key}/cmnd/STATUS`, '10')
+    })
+  }
+  checkIPs = () => {
+    Object.keys(this.devices).map((key) => {
+      this.on_publish(`mqtt/${key}/cmnd/STATUS`, '5')
+    })
   }
 
   stream = (topic, message) => {

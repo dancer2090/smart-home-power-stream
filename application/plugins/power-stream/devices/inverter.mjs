@@ -45,13 +45,6 @@ class Inverter {
         key: 'pv_power_potential',
         reset_value: 0,
       },
-      [PARAM_PV_POWER_POTENTIAL]: {
-        label: 'PV Power Potential',
-        value: 0,
-        measure: 'VT',
-        key: 'pv_power_potential',
-        reset_value: 0,
-      },
       [PARAM_BATTERY_STATUS]: {
         label: 'Battery Status',
         value: BATTERY_STAND_BY,
@@ -90,7 +83,7 @@ class Inverter {
     try {
       
       const json = JSON.parse(message)
-      console.log(json)
+      // console.log(json)
       const pv_power = this.getParameter(PARAM_PV_POWER)
       this.setParameter(
         PARAM_PV_POWER,
