@@ -1,5 +1,7 @@
 apps:
   - name : 'invertor-worker'
     script: '/root/smart-home/invertor-worker/app/server/worker.py'
+    log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
   - name : 'app'
     script: '/root/smart-home/application/server.mjs'
+    log_date_format: 'YYYY-MM-DD HH:mm:ss Z'

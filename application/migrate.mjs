@@ -23,7 +23,7 @@ async function migrate() {
     });
 
     let result;
-    result = await postgrator.migrate('002')
+    result = await postgrator.migrate()
 
     if (result.length === 0) {
       console.log(

@@ -13,18 +13,27 @@ class Tashmota {
       this.devices[device.device_name] = new Device(
         device.device_name,
         device.max_power,
-        device.priority_group
+        device.priority_group,
+        device.ip
       )
     })
   }
 
   ping = () => {
     if (this.on_publish) {
+      // check power
       setInterval(() => {
         Object.keys(this.devices).map((key) => {
           this.on_publish(`mqtt/${key}/cmnd/STATUS`, '10')
         })
       }, 10000)
+
+      // check IP address
+      setInterval(() => {
+        Object.keys(this.devices).map((key) => {
+          this.on_publish(`mqtt/${key}/cmnd/STATUS`, '5')
+        })
+      }, 30 * 60 * 1000)
     }    
   }
 
