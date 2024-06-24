@@ -5,7 +5,6 @@ import fastifyStatic from '@fastify/static'
 import fastifyEnv from '@fastify/env'
 import cors from '@fastify/cors'
 import mercurius from 'mercurius'
-import fastifyRoutes from './routes/index.mjs'
 import { PowerStreamApp } from './plugins/power-stream/index.mjs'
 import Migrate from './migrate.mjs'
 import { schema } from './constants.mjs'
@@ -71,7 +70,7 @@ export default async function appFramework() {
 
   fastify.register(fastifyStatic, {
     root: path.join(__dirname, 'public'),
-    prefix: '/public/', // optional: default '/'
+    prefix: '/', // optional: default '/'
   })
   
 
@@ -85,11 +84,6 @@ export default async function appFramework() {
 
   await Migrate()
 
-
-  // await fastify.register(PowerStreamPlugin)
-
-
-  // console.log(fastify)
   const stream = PowerStreamApp(fastify.pg)
 
   resolvers.Query.devices = async () => {
@@ -107,8 +101,6 @@ export default async function appFramework() {
     graphiql: true,
     subscription: true,
   })
-
-  fastify.register(fastifyRoutes)
 
   await fastify.ready()
 
