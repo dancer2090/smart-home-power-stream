@@ -81,7 +81,6 @@ class Inverter {
 
   stream = (message) => {
     try {
-      
       const json = JSON.parse(message)
       console.log(json)
       const pv_power = this.getParameter(PARAM_PV_POWER)
@@ -116,10 +115,6 @@ class Inverter {
     }
   }
 
-  // result_log = (item) => {
-  //   console.log(`${item.label}: ${item.value} ${item.measure}`)
-  // }
-
   autoreset = () => {
     setInterval(() => {
       if ((new Date().getTime() - this.last_message_timestamp) > 30 * 1000) {
@@ -129,14 +124,6 @@ class Inverter {
       }
     }, 30000)
   }
-
-  // watch = () => {
-  //   setInterval(() => {
-  //     Object.keys(this.params).map((key) => {
-  //       this.result_log(this.params[key])
-  //     })
-  //   }, 5000)
-  // }
 }
 
 export default Inverter

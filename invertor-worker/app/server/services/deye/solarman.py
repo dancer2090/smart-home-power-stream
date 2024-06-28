@@ -7,7 +7,7 @@ from pysolarmanv5 import PySolarmanV5
 
 log = logging.getLogger(__name__)
 
-QUERY_RETRY_ATTEMPTS = 2
+QUERY_RETRY_ATTEMPTS = 1
 
 
 class Inverter:

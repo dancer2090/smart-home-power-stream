@@ -22,6 +22,10 @@ class Device {
     return this.active_status
   }
 
+  isDeviceOff = () => {
+    return !this.isDeviceOn()
+  }
+
   autoreset = () => {
     setInterval(() => {
       if ((currentTimestamp - this.energy_last_update_time) > 30 * 1000) {
@@ -47,10 +51,21 @@ class Device {
     const parseTopic = topic.split('/')
     const handler = parseTopic[2]
     const action = parseTopic[3]
-
+    
     try {
+      if (this.id === 'plug_test_smart_home') {
+        // console.log(handler, action, parseMessage)        
+      }
+      if (handler === 'stat' && action === 'STATUS11') {
+        const json = JSON.parse(parseMessage)
+        this.active_status = json?.StatusSTS?.POWER === 'ON'
+      }
       if (handler === 'stat' && action === 'POWER') {
         this.active_status = parseMessage === 'ON'
+      }
+      if (handler === 'stat' && action === 'RESULT') {
+        const json = JSON.parse(parseMessage)
+        this.active_status = json?.POWER === 'ON'
       }
       if (handler === 'stat' && action === 'STATUS5') {
         const json = JSON.parse(parseMessage)

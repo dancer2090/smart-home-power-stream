@@ -18,7 +18,8 @@ class Tashmota {
       )
     })
     this.checkIPs()    
-    this.checkPowers()    
+    this.checkPowers()
+    this.checkActiveStatus()
   }
 
   ping = () => {
@@ -26,6 +27,10 @@ class Tashmota {
       // check power
       setInterval(() => {
         this.checkPowers()
+      }, 10000)
+
+      setInterval(() => {
+        this.checkActiveStatus()
       }, 10000)
 
       // check IP address
@@ -40,6 +45,13 @@ class Tashmota {
       this.on_publish(`mqtt/${key}/cmnd/STATUS`, '10')
     })
   }
+
+  checkActiveStatus = () => {
+    Object.keys(this.devices).map((key) => {
+      this.on_publish(`mqtt/${key}/cmnd/STATUS`, '11')
+    })
+  }
+
   checkIPs = () => {
     Object.keys(this.devices).map((key) => {
       this.on_publish(`mqtt/${key}/cmnd/STATUS`, '5')

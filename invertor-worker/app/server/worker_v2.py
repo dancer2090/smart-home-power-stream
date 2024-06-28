@@ -1,8 +1,8 @@
 # Press the green button in the gutter to run the script.
 from services.deye.solarman import Inverter
+import paho.mqtt.client as mqtt # mosquitto.py is deprecated
+import time
 from constants import LOGGER_SN, LOGGER_IP, LOGGER_PORT, REGISTERS_FILENAME_PATH, REGISTERS_FILENAME, MQTT_HOST
-from services.mqtt import MQTT
-import schedule, time
 import datetime
 import json
 
@@ -12,19 +12,15 @@ class ScanInverterLogger:
         self.ip = ip
         self.sn = sn
         self.data = None
-        self.mqtt = MQTT(host=MQTT_HOST)
 
     def before_scan(self):
+        self.data = None
         now = datetime.datetime.now()
         print(now)
         return
 
     def after_scan(self):
-        self.mqtt.publish(
-            topic='mqtt/deye_inverter_ivan/tele/STATE',
-            payload=json.dumps(self.data, indent=4)
-        )
-        print('published')
+        return
 
     def scan(self):
         self.before_scan()
@@ -44,26 +40,29 @@ class ScanInverterLogger:
         self.after_scan()
 
 
-def executor():
-    scan_inv = ScanInverterLogger(LOGGER_IP, LOGGER_SN)
-    schedule.every(3).seconds.do(scan_inv.scan)
-
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
-
-
 def main():
+    mqttc = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2, client_id="smart-home")
     try:
-        executor()
+        mqttc.connect(host=MQTT_HOST, port=1883, keepalive=60)
+        mqttc.loop_start()
+
+        while True:
+            scan_inv = ScanInverterLogger(LOGGER_IP, LOGGER_SN)
+            scan_inv.scan()
+
+            mqttc.publish(
+                topic='mqtt/deye_inverter_ivan/tele/STATE',
+                payload=json.dumps(scan_inv.data, indent=4)
+            )
+            time.sleep(4)  # sleep for 10 seconds before next call
     except KeyboardInterrupt as err:
         print('KeyboardInterrupt error')
         print(err)
-        executor()
+        pass      
     except Exception as e:
         print('Exception error')
         print(e)
-        executor()
+        mqttc.disconnect()
 
 
 if __name__ == '__main__':

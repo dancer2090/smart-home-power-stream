@@ -9,8 +9,6 @@ import Inverter, {
   PARAM_GRID_POWER,
   PARAM_LOAD_POWER,
   PARAM_PV_POWER,
-  PARAM_BATTERY_STATUS,
-  BATTERY_CHARGE,
 } from './devices/inverter.mjs';
 import Tashmota from './devices/tashmota.mjs'
 
@@ -35,6 +33,7 @@ class PowerStream {
     this.sockets = new Tashmota(this.on_publish)
     this.cmd = null
     this.cmds = []
+    this.grid_buffer = 2000 // W
   }
 
   initDevices = async () => {
@@ -44,11 +43,11 @@ class PowerStream {
 
   getInvertor = async () => {
     const ip = process.env.LOGGER_IP
-    const pv_potential = this.inverter.params[PARAM_PV_POWER_POTENTIAL].value
-    const pv_power = this.inverter.params[PARAM_PV_POWER].value
-    const grid_status = this.inverter.params[PARAM_GRID_STATUS].value === ON_GRID
-    const grid_load = this.inverter.params[PARAM_GRID_POWER].value
-    const load = this.inverter.params[PARAM_LOAD_POWER].value
+    const pv_potential = this.pvPotential()
+    const pv_power = this.pvPower()
+    const grid_status = this.isGrid()
+    const grid_load = this.gridLoad()
+    const load = this.homeLoad()
 
     return {
       ip,
@@ -110,8 +109,8 @@ class PowerStream {
     
     const obj = {
       cmd_id: uuidv4(),
-      device_name: device_name,
-      action: CMD_ACTIONS.DEVICE_ON,
+      device_name,
+      action,
       cmd_status: CMD_STATUSES.PENDING,
       timestamp: currentTimestamp()
     }
@@ -194,12 +193,80 @@ class PowerStream {
     this.clearCmd()
   }
 
+  // PRIORIRY_GROUP ONE
+  // Devices that on only if grid on with priority one
+  controlPriorityGroupOne = () => {
+    const devices_group = this.sockets.getDevicesByPriorityGroup(1)
+
+    Object.keys(devices_group).forEach(key => {
+      const device = devices_group[key];
+      if (this.isGrid() && !device.isDeviceOn()) {
+        this.runCmd(devices_group[key].id, CMD_ACTIONS.DEVICE_ON)
+        return
+      }
+      
+      if (!this.isGrid() && device.isDeviceOn()) {
+        this.runCmd(devices_group1[key].id, CMD_ACTIONS.DEVICE_OFF)
+        return
+      }
+    })
+  }
+
+  // PRIORIRY_GROUP TWO
+  // Devices that on only if grid on with priority one
+  controlPriorityGroupTwo = () => {
+    const devices_group = this.sockets.getDevicesByPriorityGroup(2)
+    Object.keys(devices_group).forEach(key => {
+      const device = devices_group[key];
+      if (
+        this.isGrid() &&
+        device.isDeviceOff()
+      ) {
+        if (
+          this.pvPotential() > device.max_power * 0.33 &&
+          this.gridLoad() < this.grid_buffer
+        ) {
+          this.runCmd(devices_group[key].id, CMD_ACTIONS.DEVICE_ON)
+        }
+        return
+      }
+
+      if (
+        this.isGrid() &&
+        device.isDeviceOn()
+      ) {
+        if (this.gridLoad() > this.grid_buffer) {
+          this.runCmd(devices_group[key].id, CMD_ACTIONS.DEVICE_OFF)
+        }
+        return
+      }
+      
+      if (
+        !this.isGrid() &&
+        device.isDeviceOn()
+      ) {
+        this.runCmd(devices_group[key].id, CMD_ACTIONS.DEVICE_OFF)
+        return
+      }
+    })
+  }
+
+  isGrid = () => this.inverter.params[PARAM_GRID_STATUS].value === ON_GRID
+
+  pvPotential = () => this.inverter.params[PARAM_PV_POWER_POTENTIAL].value
+
+  pvPower = () => this.inverter.params[PARAM_PV_POWER].value
+
+  gridLoad = () => this.inverter.params[PARAM_GRID_POWER].value
+
+  homeLoad = () => this.inverter.params[PARAM_LOAD_POWER].value
+
   smartControl = () => {
     setInterval(() => {
 
       // if (process.env.ACTIVE_STREAM === 'false') return;
       console.log('🎈🎈🎈🎈🎈🎈🎈 Iteration 🎈🎈🎈🎈🎈🎈🎈🎈🎈')
-      console.log(this.cmd, this.cmds.length)
+      console.log(this.cmd)
 
       this.processCmd()
 
@@ -207,66 +274,17 @@ class PowerStream {
 
       this.checkCmdReset()
       
-      console.log(this.isCmdInProgress(), this.cmd)
       if (this.isCmdInProgress()) return;
 
-      const potential = this.inverter.params[PARAM_PV_POWER_POTENTIAL].value
-      const pv_power = this.inverter.params[PARAM_PV_POWER].value
-      const is_grid = this.inverter.params[PARAM_GRID_STATUS].value === ON_GRID
-      const is_used_battery = this.inverter.params[PARAM_BATTERY_STATUS].value !== BATTERY_CHARGE
-      const load = this.inverter.params[PARAM_LOAD_POWER].value
-      
-      const devices_group1 = this.sockets.getDevicesByPriorityGroup(1)
-      const devices_group2 = this.sockets.getDevicesByPriorityGroup(2)
-      // console.table({ potential, is_grid, load, pv_power, is_used_battery })
+      const controls = [
+        this.controlPriorityGroupOne,
+        this.controlPriorityGroupTwo,
+      ]
 
-      if (is_grid) {
-        // Priority 0 - on every time
-        // Priority 1 - включен всегда, если есть энергия (либо grid, либо солнце)
-        // Насос
-
-        // Priority 2 - включен в дневное время суток если есть энергия хотя бы 1 кВт от Солнца, сеть включена
-        // Бойлер
-        // Тут желательно понимать будет ли 1 кВт вообще в облачную погоду. Пока под вопросом.
-              // on device
-        //     // off device
-        //     if (
-        //       (potential - load) < devices_group2[key].max_power * 0.66 * -1 &&
-        //       devices_group2[key].active_status === true &&
-        //       devices_group2[key].active_power !== 0
-        //     ) 
-        //     {
-        //       devices_group2[key].stopWithGrid(() => {
-        //         this.mqtt.publish(`mqtt/${devices_group2[key].id}/cmnd/Power`, '0')
-        //       })
-        //     }
-        //   })
+      for (const control of controls) {
+        control()
+        if (this.isCmdInProgress()) break;
       }
-
-      if (!is_grid) {
-        // wait when solar radiation sensor comes
-        // fetch solar radiation parameter (WebHMI API, Forecast API)
-        // Predict potential by using model
-        // potential = new_value
-
-        // Priority 0 - on every time
-        // Priority 1 - включен всегда, если есть энергия (солнце)
-        // Насос
-        // Тут можно сделать скидку на мощность, если хорошие аккумы и ставить формулу. Пока в работе
-        // (potential - load) > (devices_group1[key].max_power - 1000). 1 кВт  с аккумов берем.
-
-        Object.keys(devices_group2).map(key => {
-          console.log('cmd', devices_group2[key].id, CMD_ACTIONS.DEVICE_OFF)
-          this.runCmd(devices_group2[key].id, CMD_ACTIONS.DEVICE_OFF)
-        })
-      }
-
-        // Priority 3 - включен в дневное время суток если есть энергия солнца хотя бы 500 Вт
-        // Зарядная станция (самокат)
-
-        // Priority 4 - включен в дневное время суток если есть свободная энергия солнца хотя бы 2000 Вт
-        // Стиралка, Духовка.
-
     }, 1000)
   }
 
@@ -282,7 +300,6 @@ class PowerStream {
   }
 
   on_message = (topic, message, packet) => {
-    // console.log(topic)
     if (topic === this.inverter.topic) this.inverter.stream(message)
     else if (['/tele', '/stat'].some((key) => topic.includes(key))) this.sockets.stream(topic, message)
   }
