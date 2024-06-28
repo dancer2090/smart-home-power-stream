@@ -1,4 +1,7 @@
 import MQTT from '../../lib/mqtt-sh.mjs';
+import { currentTimestamp } from '../../lib/helper.mjs'
+import { v4 as uuidv4 } from 'uuid';
+
 import Inverter, {
   PARAM_PV_POWER_POTENTIAL,
   PARAM_GRID_STATUS,
@@ -11,12 +14,27 @@ import Inverter, {
 } from './devices/inverter.mjs';
 import Tashmota from './devices/tashmota.mjs'
 
+const CMD_STATUSES = {
+  START: 'START',
+  PENDING: 'PENDING',
+  FAIL: 'FAIL',
+  DONE: 'DONE',
+  HOLD: 'HOLD',
+}
+
+const CMD_ACTIONS = {
+  DEVICE_ON: 'DEVICE_ON',
+  DEVICE_OFF: 'DEVICE_OFF',
+}
+
 class PowerStream {
   constructor(pg) {
     this.pg = pg
     this.mqtt = null
     this.inverter = new Inverter()
     this.sockets = new Tashmota(this.on_publish)
+    this.cmd = null
+    this.cmds = []
   }
 
   initDevices = async () => {
@@ -43,7 +61,6 @@ class PowerStream {
   }
 
   getDevices = async () => {
-    // const query = await this.pg.query('SELECT * FROM devices');   
     return Object.keys(this.sockets.devices).map(device => ({
       id: this.sockets.devices[device].id,
       device_name: this.sockets.devices[device].device_name,
@@ -74,9 +91,125 @@ class PowerStream {
     }, 10000)    
   }
 
+  isCmdExists = () => this.cmd && Object.keys(CMD_STATUSES).includes(this.cmd.cmd_status)
+
+  clearCmd = () => {
+    if (!this.isCmdExists()) return
+
+    const { cmd_id } = this.cmd
+    
+    const index = this.cmds.findIndex(cmd => cmd.cmd_id === cmd_id);
+    if (index > -1) {
+      this.cmds.splice(index, 1);
+    }
+    this.cmd = null
+  }
+
+  runCmd = (device_name, action) => {
+    if (!CMD_ACTIONS[action]) return
+    
+    const obj = {
+      cmd_id: uuidv4(),
+      device_name: device_name,
+      action: CMD_ACTIONS.DEVICE_ON,
+      cmd_status: CMD_STATUSES.PENDING,
+      timestamp: currentTimestamp()
+    }
+    
+    this.cmds.push(obj)
+    
+    this.cmd = this.cmds[0]
+  }
+
+  isCmdInProgress = () => {
+    if (!this.isCmdExists()) return false
+    if (this.cmd.cmd_status && [CMD_STATUSES.PENDING, CMD_STATUSES.START].includes(this.cmd.cmd_status)) return true
+
+    return true
+  }
+
+  setCmdStatus = (status) => {
+    if (!this.isCmdExists()) throw new Error('CMD does not exist')
+    if (!CMD_STATUSES[status]) throw new Error('CMD status does not exist')
+    this.cmd.cmd_status = status
+  }
+
+  // Process only Pending CMDs
+  processCmd = () => {
+    if (!this.isCmdExists()) return
+
+    const { action, cmd_status, device_name } = this.cmd
+
+    if (cmd_status !== CMD_STATUSES.PENDING) return
+
+    const device = this.sockets.devices[device_name]
+
+    // on device
+    if (action === CMD_ACTIONS.DEVICE_ON) {
+      device.start(() => {
+        this.mqtt.publish(`mqtt/${device.id}/cmnd/Power`, '1')
+      })
+    }
+
+    // of device
+    if (action === CMD_ACTIONS.DEVICE_OFF) {
+      device.stop(() => {
+        this.mqtt.publish(`mqtt/${device.id}/cmnd/Power`, '0')
+      })      
+    }
+    
+    this.setCmdStatus(CMD_STATUSES.START)
+  }
+
+  checkCmdExecution = () => {
+    if (!this.isCmdExists()) return
+    if (!this.isCmdInProgress()) return
+    const { action, cmd_status, device_name, timestamp } = this.cmd
+
+    if (cmd_status !== CMD_STATUSES.START) return
+
+    const device = this.sockets.devices[device_name]
+    
+    if (action === CMD_ACTIONS.DEVICE_ON && device.isDeviceOn()) {
+      this.setCmdStatus(CMD_STATUSES.DONE)
+      return
+    }
+
+    if (action === CMD_ACTIONS.DEVICE_OFF && !device.isDeviceOn()) {
+      this.setCmdStatus(CMD_STATUSES.DONE)
+      return
+    }
+
+    if ((currentTimestamp() - timestamp) > 1 * 60 * 1000) {
+      this.setCmdStatus(CMD_STATUSES.FAIL)
+      return
+    }
+  }
+
+  checkCmdReset = () => {
+    if (!this.isCmdExists()) return
+    const { cmd_status } = this.cmd
+
+    if (![CMD_STATUSES.FAIL, CMD_STATUSES.DONE].includes(cmd_status)) return
+    this.clearCmd()
+  }
+
   smartControl = () => {
     setInterval(() => {
-      if (process.env.ACTIVE_STREAM === 'false') return;
+
+      // if (process.env.ACTIVE_STREAM === 'false') return;
+      console.log('🎈🎈🎈🎈🎈🎈🎈 Iteration 🎈🎈🎈🎈🎈🎈🎈🎈🎈')
+      console.log(this.cmd, this.cmds.length)
+
+      this.processCmd()
+
+      this.checkCmdExecution()
+
+      this.checkCmdReset()
+      
+      console.log(this.isCmdInProgress(), this.cmd)
+      if (this.isCmdInProgress()) return;
+
       const potential = this.inverter.params[PARAM_PV_POWER_POTENTIAL].value
       const pv_power = this.inverter.params[PARAM_PV_POWER].value
       const is_grid = this.inverter.params[PARAM_GRID_STATUS].value === ON_GRID
@@ -85,45 +218,29 @@ class PowerStream {
       
       const devices_group1 = this.sockets.getDevicesByPriorityGroup(1)
       const devices_group2 = this.sockets.getDevicesByPriorityGroup(2)
-      console.table({ potential, is_grid, load, pv_power, is_used_battery })
+      // console.table({ potential, is_grid, load, pv_power, is_used_battery })
 
       if (is_grid) {
         // Priority 0 - on every time
         // Priority 1 - включен всегда, если есть энергия (либо grid, либо солнце)
         // Насос
-        Object.keys(devices_group1).map(key => {
-          devices_group1[key].start(() => {
-            this.mqtt.publish(`mqtt/${devices_group1[key].id}/cmnd/Power`, '1')
-          })
-        })
 
         // Priority 2 - включен в дневное время суток если есть энергия хотя бы 1 кВт от Солнца, сеть включена
         // Бойлер
         // Тут желательно понимать будет ли 1 кВт вообще в облачную погоду. Пока под вопросом.
-        
-        Object.keys(devices_group2).map(key => {
-          // on device
-          if (
-            (potential - load) > devices_group2[key].max_power * 0.33
-          )
-          {
-            devices_group2[key].start(() => {
-              this.mqtt.publish(`mqtt/${devices_group2[key].id}/cmnd/Power`, '1')
-            })
-          }
-
-          // off device
-          if (
-            (potential - load) < devices_group2[key].max_power * 0.66 * -1 &&
-            devices_group2[key].active_status === true &&
-            devices_group2[key].active_power !== 0
-          ) 
-          {
-            devices_group2[key].stopWithGrid(() => {
-              this.mqtt.publish(`mqtt/${devices_group2[key].id}/cmnd/Power`, '0')
-            })
-          }
-        })
+              // on device
+        //     // off device
+        //     if (
+        //       (potential - load) < devices_group2[key].max_power * 0.66 * -1 &&
+        //       devices_group2[key].active_status === true &&
+        //       devices_group2[key].active_power !== 0
+        //     ) 
+        //     {
+        //       devices_group2[key].stopWithGrid(() => {
+        //         this.mqtt.publish(`mqtt/${devices_group2[key].id}/cmnd/Power`, '0')
+        //       })
+        //     }
+        //   })
       }
 
       if (!is_grid) {
@@ -132,37 +249,23 @@ class PowerStream {
         // Predict potential by using model
         // potential = new_value
 
-
         // Priority 0 - on every time
         // Priority 1 - включен всегда, если есть энергия (солнце)
         // Насос
         // Тут можно сделать скидку на мощность, если хорошие аккумы и ставить формулу. Пока в работе
         // (potential - load) > (devices_group1[key].max_power - 1000). 1 кВт  с аккумов берем.
-        Object.keys(devices_group1).map(key => {
-          devices_group1[key].stop(() => {
-            this.mqtt.publish(`mqtt/${devices_group1[key].id}/cmnd/Power`, '0')
-          })
-        })
 
         Object.keys(devices_group2).map(key => {
-          devices_group2[key].stop(() => {
-            this.mqtt.publish(`mqtt/${devices_group2[key].id}/cmnd/Power`, '0')
-          })
+          console.log('cmd', devices_group2[key].id, CMD_ACTIONS.DEVICE_OFF)
+          this.runCmd(devices_group2[key].id, CMD_ACTIONS.DEVICE_OFF)
         })
       }
 
-      // Priority 3 - включен в дневное время суток если есть энергия солнца хотя бы 500 Вт
-      // Зарядная станция (самокат)
-      // if ((potential - load) > 500) {
-      //   return
-      // }
+        // Priority 3 - включен в дневное время суток если есть энергия солнца хотя бы 500 Вт
+        // Зарядная станция (самокат)
 
-      // Priority 4 - включен в дневное время суток если есть свободная энергия солнца хотя бы 2000 Вт
-      // Стиралка, Духовка.
-      // if (is_grid || potential > 2000) {
-        
-      //   return
-      // }
+        // Priority 4 - включен в дневное время суток если есть свободная энергия солнца хотя бы 2000 Вт
+        // Стиралка, Духовка.
 
     }, 1000)
   }

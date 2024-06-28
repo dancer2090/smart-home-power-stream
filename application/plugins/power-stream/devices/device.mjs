@@ -1,3 +1,4 @@
+import { currentTimestamp } from '../../../lib/helper.mjs'
 class Device {
   constructor(id, max_power = 0, priority_group = 0, device_ip = '') {
     this.id = id
@@ -17,9 +18,13 @@ class Device {
     this.autoreset()
   }
 
+  isDeviceOn = () => {
+    return this.active_status
+  }
+
   autoreset = () => {
     setInterval(() => {
-      if ((this.currentTimestamp() - this.energy_last_update_time) > 30 * 1000) {
+      if ((currentTimestamp - this.energy_last_update_time) > 30 * 1000) {
         this.energy = null
         this.active_power = 0
         this.active_status = false
@@ -43,27 +48,28 @@ class Device {
     const handler = parseTopic[2]
     const action = parseTopic[3]
 
-    // if (handler === 'tele' && action === 'STATE') {
-    //   console.log(JSON.parse(parseMessage))
-    // }
-    if (handler === 'stat' && action === 'POWER') {
-      this.active_status = parseMessage === 'ON'
-    }
-    if (handler === 'stat' && action === 'STATUS5') {
-      const json = JSON.parse(parseMessage)
-      this.device_ip = json?.StatusNET?.IPAddress ?? ''
-    }
-    if (handler === 'stat' && action === 'STATUS10') {
-      const json = JSON.parse(parseMessage)
-      this.energy = json?.StatusSNS?.ENERGY
-      this.energy_last_update_time = new Date(json.Time).getTime()
-    }
-    if (handler === 'tele' && action === 'SENSOR') {
-      const json = JSON.parse(parseMessage)
-      this.energy = json.ENERGY
-      this.energy_last_update_time = new Date(json.Time).getTime()
-    }
+    try {
+      if (handler === 'stat' && action === 'POWER') {
+        this.active_status = parseMessage === 'ON'
+      }
+      if (handler === 'stat' && action === 'STATUS5') {
+        const json = JSON.parse(parseMessage)
+        this.device_ip = json?.StatusNET?.IPAddress ?? ''
+      }
+      if (handler === 'stat' && action === 'STATUS10') {
+        const json = JSON.parse(parseMessage)
+        this.energy = json?.StatusSNS?.ENERGY
+        this.energy_last_update_time = new Date(json.Time).getTime()
+      }
+      if (handler === 'tele' && action === 'SENSOR') {
+        const json = JSON.parse(parseMessage)
+        this.energy = json.ENERGY
+        this.energy_last_update_time = new Date(json.Time).getTime()
+      }
+    } catch (e) {
 
+    }
+    
     this.controlMaxPower()
     this.controlActivePower()
   }
@@ -72,40 +78,38 @@ class Device {
     return this.energy ?? null
   }
 
-  currentTimestamp = () => new Date().getTime()
-
   start = (callback = () => {}) => {
     if (
-      (this.currentTimestamp() - this.startTime) > 1 * 60 * 1000
+      (currentTimestamp() - this.startTime) > 1 * 60 * 1000
     ) {
       callback()
-      this.startTime = this.currentTimestamp()
+      this.startTime = currentTimestamp()
     }
   }
 
   offDelay = () => {
-    return (this.currentTimestamp() - this.startTime) > this.offDelayInteval
+    return (currentTimestamp() - this.startTime) > this.offDelayInteval
   }
 
   stopWithGrid = () => {
     // set 5 min delay if on
     if (
-      (this.currentTimestamp() - this.stopTime) > 5 * 1000 &&
+      (currentTimestamp() - this.stopTime) > 5 * 1000 &&
       this.offDelay
     )
     {
       callback()
-      this.stopTime = this.currentTimestamp()
+      this.stopTime = currentTimestamp()
     }
   }
 
   stop = (callback = () => {}) => {
     if (
-      (this.currentTimestamp() - this.stopTime) > 5 * 1000
+      (currentTimestamp() - this.stopTime) > 5 * 1000
     ) 
       {
       callback()
-      this.stopTime = this.currentTimestamp()
+      this.stopTime = currentTimestamp()
     }
   }
 }

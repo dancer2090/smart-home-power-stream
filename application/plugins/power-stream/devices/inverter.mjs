@@ -83,7 +83,7 @@ class Inverter {
     try {
       
       const json = JSON.parse(message)
-      // console.log(json)
+      console.log(json)
       const pv_power = this.getParameter(PARAM_PV_POWER)
       this.setParameter(
         PARAM_PV_POWER,

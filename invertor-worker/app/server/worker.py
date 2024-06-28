@@ -24,6 +24,7 @@ class ScanInverterLogger:
             topic='mqtt/deye_inverter_ivan/tele/STATE',
             payload=json.dumps(self.data, indent=4)
         )
+        print('published')
 
     def scan(self):
         self.before_scan()
@@ -43,19 +44,24 @@ class ScanInverterLogger:
         self.after_scan()
 
 
-def main():
+def executor():
     scan_inv = ScanInverterLogger(LOGGER_IP, LOGGER_SN)
-    schedule.every(2).seconds.do(scan_inv.scan)
+    schedule.every(3).seconds.do(scan_inv.scan)
 
     while True:
-        try:
-            schedule.run_pending()
-            time.sleep(1)
-        except Exception as e:
-            print(e)
-            print('restart')
-            schedule.run_pending()
-            time.sleep(1)
+        schedule.run_pending()
+        time.sleep(1)
+
+
+def main():
+    try:
+        executor()
+    except KeyboardInterrupt as err:
+        print(err)
+        executor()
+    except Exception as e:
+        print(e)
+        executor()
 
 
 if __name__ == '__main__':
