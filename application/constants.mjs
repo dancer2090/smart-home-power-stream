@@ -40,7 +40,7 @@ export const schema = {
     },
     MQTT_HOST: {
       type: 'string',
-      default: '192.168.1.191'
+      default: '192.168.1.129'
     },
     MQTT_PORT: {
       type: 'string',

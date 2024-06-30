@@ -3,6 +3,7 @@ import appFramework from './app.mjs'
 
 (async () => {
   const app = await appFramework();
+  console.log(process.env)
   try {
     await app.listen({
       port: process.env.APP_PORT,

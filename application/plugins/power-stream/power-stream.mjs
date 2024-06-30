@@ -87,6 +87,7 @@ class PowerStream {
         `;
         this.pg.query(str)
       })
+      this.initDevices()
     }, 10000)    
   }
 
@@ -193,27 +194,41 @@ class PowerStream {
     this.clearCmd()
   }
 
-  // PRIORIRY_GROUP ONE
-  // Devices that on only if grid on with priority one
+
+  /**
+   * PRIORIRY_GROUP ONE (Solar + Grid)
+   * Grid On
+   *    On device
+   * Grid Off
+   *    Off device
+   *    HERE WILL BE SOLAR CONTROL
+   */
   controlPriorityGroupOne = () => {
     const devices_group = this.sockets.getDevicesByPriorityGroup(1)
 
     Object.keys(devices_group).forEach(key => {
       const device = devices_group[key];
       if (this.isGrid() && !device.isDeviceOn()) {
-        this.runCmd(devices_group[key].id, CMD_ACTIONS.DEVICE_ON)
+        this.runCmd(device.id, CMD_ACTIONS.DEVICE_ON)
         return
       }
       
       if (!this.isGrid() && device.isDeviceOn()) {
-        this.runCmd(devices_group1[key].id, CMD_ACTIONS.DEVICE_OFF)
+        this.runCmd(device.id, CMD_ACTIONS.DEVICE_OFF)
         return
       }
     })
   }
 
-  // PRIORIRY_GROUP TWO
-  // Devices that on only if grid on with priority one
+  /**
+   * PRIORIRY_GROUP TWO (Solar + Grid)
+   * Grid On
+   *    On device if PV power 33% of required capacity. Grid On
+   *    Off device if grid_buffer more than 2 kW. 
+   * Grid Off
+   *    Off device
+   *    HERE WILL BE SOLAR CONTROL
+   */
   controlPriorityGroupTwo = () => {
     const devices_group = this.sockets.getDevicesByPriorityGroup(2)
     Object.keys(devices_group).forEach(key => {
@@ -226,7 +241,7 @@ class PowerStream {
           this.pvPotential() > device.max_power * 0.33 &&
           this.gridLoad() < this.grid_buffer
         ) {
-          this.runCmd(devices_group[key].id, CMD_ACTIONS.DEVICE_ON)
+          this.runCmd(device.id, CMD_ACTIONS.DEVICE_ON)
         }
         return
       }
@@ -236,7 +251,7 @@ class PowerStream {
         device.isDeviceOn()
       ) {
         if (this.gridLoad() > this.grid_buffer) {
-          this.runCmd(devices_group[key].id, CMD_ACTIONS.DEVICE_OFF)
+          this.runCmd(device.id, CMD_ACTIONS.DEVICE_OFF)
         }
         return
       }
@@ -245,10 +260,69 @@ class PowerStream {
         !this.isGrid() &&
         device.isDeviceOn()
       ) {
-        this.runCmd(devices_group[key].id, CMD_ACTIONS.DEVICE_OFF)
+        this.runCmd(device.id, CMD_ACTIONS.DEVICE_OFF)
         return
       }
     })
+  }
+
+  /**
+   * PRIORIRY_GROUP THREE (Solar Only). Charge Stations
+   * Grid On
+   *    On device
+   * Grid Off
+   *    Off device
+   *    HERE WILL BE SOLAR CONTROL
+   */
+  controlPriorityGroupThree = () => {
+    const devices_group = this.sockets.getDevicesByPriorityGroup(3)
+
+    for (const key of Object.keys(devices_group)) {
+      const device = devices_group[key]
+      if (
+        this.gridLoad() <= 0 &&
+        this.pvPotential() >= this.homeLoad() &&
+        device.isDeviceOff()
+      ) {
+        this.runCmd(device.id, CMD_ACTIONS.DEVICE_ON)
+        break;
+      }
+
+      if (
+        (
+          this.gridLoad() > 0 ||
+          this.pvPotential() < this.homeLoad()
+        ) &&
+        device.isDeviceOn()
+      ) {
+        this.runCmd(device.id, CMD_ACTIONS.DEVICE_OFF)
+        break;
+      }
+    }
+  }
+
+  /**
+   * PRIORIRY_GROUP Four (Solar Only)
+   * Grid On
+   *    On device
+   * Grid Off
+   *    Off device
+   *    HERE WILL BE SOLAR CONTROL
+   */
+  controlPriorityGroupFour = () => {
+    const devices_group = this.sockets.getDevicesByPriorityGroup(4)
+    for (const key of Object.keys(devices_group)) {
+      const device = devices_group[key]
+      if (this.isGrid() && !device.isDeviceOn()) {
+        this.runCmd(device.id, CMD_ACTIONS.DEVICE_ON)
+        break
+      }
+      
+      if (!this.isGrid() && device.isDeviceOn()) {
+        this.runCmd(device.id, CMD_ACTIONS.DEVICE_OFF)
+        break
+      }
+    }
   }
 
   isGrid = () => this.inverter.params[PARAM_GRID_STATUS].value === ON_GRID
@@ -279,6 +353,8 @@ class PowerStream {
       const controls = [
         this.controlPriorityGroupOne,
         this.controlPriorityGroupTwo,
+        this.controlPriorityGroupThree,
+        this.controlPriorityGroupFour,
       ]
 
       for (const control of controls) {

@@ -19,7 +19,7 @@ class Inverter {
       [PARAM_PV_POWER]: {
         label: 'PV Power',
         value: 0,
-        measure: 'VT',
+        measure: 'W',
         key1: 'PV1 Power',
         key2: 'PV2 Power',
         reset_value: 0,
@@ -27,7 +27,7 @@ class Inverter {
       [PARAM_GRID_POWER]: {
         label: 'Grid Power',
         value: 0,
-        measure: 'VT',
+        measure: 'W',
         key: 'Total Grid Power',
         reset_value: 0,
       },
@@ -41,7 +41,7 @@ class Inverter {
       [PARAM_PV_POWER_POTENTIAL]: {
         label: 'PV Power Potential',
         value: 0,
-        measure: 'VT',
+        measure: 'W',
         key: 'pv_power_potential',
         reset_value: 0,
       },
@@ -55,7 +55,7 @@ class Inverter {
       [PARAM_LOAD_POWER]: {
         label: 'Load Power',
         value: 0,
-        measure: '',
+        measure: 'W',
         key: 'Total Load Power',
         reset_value: 0,
       }
@@ -82,20 +82,39 @@ class Inverter {
   stream = (message) => {
     try {
       const json = JSON.parse(message)
-      console.log(json)
+      
       const pv_power = this.getParameter(PARAM_PV_POWER)
-      this.setParameter(
-        PARAM_PV_POWER,
-        json[pv_power.key1] + json[pv_power.key2]
-      )
-      this.setParameter(PARAM_GRID_POWER, json[this.getParameter(PARAM_GRID_POWER).key])
+      console.log('json')
+      if (Number.isInteger(json[pv_power.key1]) && Number.isInteger(json[pv_power.key2])) {
+        this.setParameter(
+          PARAM_PV_POWER,
+          (json[pv_power.key1] + json[pv_power.key2]) ?? 0
+        )
+      }
+      
+      if (Number.isInteger(json[this.getParameter(PARAM_GRID_POWER).key])) {
+        this.setParameter(PARAM_GRID_POWER, json[this.getParameter(PARAM_GRID_POWER).key])
+      }
+      
       this.setParameter(PARAM_GRID_STATUS, json[this.getParameter(PARAM_GRID_STATUS).key])
+
       this.setParameter(PARAM_BATTERY_STATUS, json[this.getParameter(PARAM_BATTERY_STATUS).key])
-      this.setParameter(PARAM_LOAD_POWER, json[this.getParameter(PARAM_LOAD_POWER).key])
+      
+
+      if (Number.isInteger(json[this.getParameter(PARAM_LOAD_POWER).key])) {
+        this.setParameter(PARAM_LOAD_POWER, json[this.getParameter(PARAM_LOAD_POWER).key])
+      }
 
       this.culculate_pv_power_potential()
 
       this.last_message_timestamp = new Date().getTime()
+
+      console.table([
+        this.getParameter(PARAM_PV_POWER),
+        this.getParameter(PARAM_GRID_POWER),
+        this.getParameter(PARAM_GRID_STATUS),
+        this.getParameter(PARAM_LOAD_POWER)
+      ])
     } catch (error) {
       console.log(error)
       console.log('Fail to Parse Inverter data')
