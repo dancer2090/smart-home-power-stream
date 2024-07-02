@@ -87,7 +87,7 @@ class PowerStream {
         `;
         this.pg.query(str)
       })
-      this.initDevices()
+      // this.initDevices()
     }, 10000)    
   }
 

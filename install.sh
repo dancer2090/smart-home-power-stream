@@ -56,6 +56,10 @@ pm2 install pm2-logrotate
 
 apt install unzip -y
 
+apt install ntp -y
+apt install ntpdate -y
+ntpdate pool.ntp.org
+
 apt install python3.11 -y
 apt install python3-pip -y
 apt install cmake -y
@@ -74,6 +78,9 @@ EOF
 
 systemctl restart mosquitto
 
+sudo dpkg --configure -a
+systemctl stop packagekit
+
 sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"
 sudo -u postgres psql -c "CREATE DATABASE smart_home;"
 sudo su postgres <<EOF
@@ -81,5 +88,14 @@ psql -c "ALTER USER postgres WITH PASSWORD 'postgres';"
 psql -c "CREATE DATABASE smart_home;"
 EOF
 
+
 reboot
 # Open Postgres Port 0.0.0.0 manually - http://bookstack.frontback.org/books/smart-home/page/orange-pi-install
+
+
+
+# apt install wireless-tools -y
+# apt-get install lshw -y
+
+# Disable power suply
+# cd /etc/systemd/sleep.conf 

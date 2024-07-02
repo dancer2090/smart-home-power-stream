@@ -81,6 +81,7 @@ class Device {
         this.energy = json.ENERGY
         this.energy_last_update_time = new Date(json.Time).getTime()
       }
+      this.energy_last_update_time = new Date().getTime()
     } catch (e) {
 
     }
