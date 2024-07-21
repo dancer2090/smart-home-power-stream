@@ -47,8 +47,5 @@ echo "host    all             all             0.0.0.0/0            md5" >> /etc/
 
 reboot
 
-# apt install wireless-tools -y
-# apt-get install lshw -y
-
 # Disable power suply
 # cd /etc/systemd/sleep.conf 

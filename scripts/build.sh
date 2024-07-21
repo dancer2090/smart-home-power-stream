@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# Script generates a zip file for production. Then upload it to mini computer
+ROOT_USER=root
+IP=192.168.1.129
+
 # Prepare frontend build
 cd frontend
 npm i
@@ -18,4 +22,4 @@ zip -r ./smart-home.zip ./ \
  -x ".git/*" \
  -x "venv/*" \
  -x "frontend/*"
-scp -r ./smart-home.zip root@192.168.1.129:/root/
+scp -r ./smart-home.zip $ROOT_USER@$IP:/root/
