@@ -3,6 +3,7 @@ import Devices from './components/Devices';
 import Invertor from './components/Invertor';
 import { useEffect } from 'react';
 import { gql, useQuery } from 'urql';
+import LayoutApp from './layout'
 
 const Query = gql`
   query {
@@ -27,32 +28,34 @@ const Query = gql`
     }
   }
 `;
+
+let interval = null
+
 function App() {
 
   const [result, reexecuteQuery] = useQuery({
     query: Query,
   });
 
-  const { data, fetching, error } = result;
+  const { data, error } = result;
   useEffect(() => {
-    setInterval(() => {
+    if (interval) return
+    
+    interval = setInterval(() => {
       console.log('reexecute')
       reexecuteQuery({ requestPolicy: 'network-only' })
-    }, 2000)
+    }, 5000)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // if (fetching) return <p>Loading...</p>;
   if (error) return <p>Oh no... {error.message}</p>;
 
   return (
-    <div className="App">
-      <header className="App-header">
-        POWER STREAM
-      </header>
+    <LayoutApp>
       <Invertor invertor={data?.invertor} />
       <br />
       <Devices devices={data?.devices} />
-    </div>
+    </LayoutApp>      
   );
 }
 
