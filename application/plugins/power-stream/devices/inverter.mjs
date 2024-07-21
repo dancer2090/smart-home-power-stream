@@ -141,7 +141,7 @@ class Inverter {
           this.setParameter(key, this.getParameter(key).reset_value)
         })
       }
-    }, 30000)
+    }, 90000)
   }
 }
 

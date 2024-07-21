@@ -1,5 +1,6 @@
 import yaml
 import logging
+import pathlib
 from datetime import datetime
 from .parser import ParameterParser
 from pysolarmanv5 import PySolarmanV5
@@ -26,7 +27,9 @@ class Inverter:
         if not self.lookup_file or lookup_file == 'parameters.yaml':
             self.lookup_file = 'deye_hybrid.yaml'
 
-        with open(self.path + self.lookup_file) as f:
+        self.path = str(pathlib.Path(__file__).parent.resolve())
+
+        with open(self.path + '/' + self.lookup_file) as f:
             self.parameter_definition = yaml.full_load(f)
 
 

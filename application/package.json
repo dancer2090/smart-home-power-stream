@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "migrate": "node migrate.mjs",
-    "start": "node server.mjs"
+    "start": "node server.mjs",
+    "worker": "python /invertor-worker/app/server/worker_v3.py"
   },
   "author": "",
   "license": "ISC",

@@ -42,28 +42,17 @@ class ScanInverterLogger:
 
 def main():
     mqttc = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2, client_id="smart-home")
+
     try:
         mqttc.connect(host=MQTT_HOST, port=1883, keepalive=60)
         mqttc.loop_start()
-
-        while True:
-            try:
-                scan_inv = ScanInverterLogger(LOGGER_IP, LOGGER_SN)
-                scan_inv.scan()
-                if bool(scan_inv.data):
-                    mqttc.publish(
-                        topic='mqtt/deye_inverter_ivan/tele/STATE',
-                        payload=json.dumps(scan_inv.data, indent=4)
-                    )
-                time.sleep(4)  # sleep for 10 seconds before next call
-            except KeyboardInterrupt as err:
-                print(err)
-                pass
-
-    except KeyboardInterrupt as err:
-        print('KeyboardInterrupt error')
-        print(err)
-        pass      
+        scan_inv = ScanInverterLogger(LOGGER_IP, LOGGER_SN)
+        scan_inv.scan()
+        if bool(scan_inv.data):
+            mqttc.publish(
+                topic='mqtt/deye_inverter_ivan/tele/STATE',
+                payload=json.dumps(scan_inv.data, indent=4)
+            )
     except Exception as e:
         print('Exception error')
         print(e)
