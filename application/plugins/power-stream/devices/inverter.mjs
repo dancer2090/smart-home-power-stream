@@ -63,7 +63,7 @@ class Inverter {
 
     this.last_message_timestamp = 0
 
-    this.RESET_TIMER = 60 * 1000
+    this.RESET_TIMER = 120 * 1000
     this.AUTORESET_INTERVAL = 15 * 1000
 
     this.autoreset()

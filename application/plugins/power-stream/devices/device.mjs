@@ -14,7 +14,10 @@ class Device {
     this.active_power = 0
 
     this.offDelayInteval = 5 * 60 * 1000
-    
+
+    this.RESET_TIMER = 45 * 1000
+    this.AUTORESET_INTERVAL = 15 * 1000
+
     this.autoreset()
   }
 
@@ -28,12 +31,12 @@ class Device {
 
   autoreset = () => {
     setInterval(() => {
-      if ((currentTimestamp - this.energy_last_update_time) > 30 * 1000) {
+      if ((currentTimestamp - this.energy_last_update_time) > this.RESET_TIMER) {
         this.energy = null
         this.active_power = 0
         this.active_status = false
       }
-    }, 30000)
+    }, this.AUTORESET_INTERVAL)
   }
 
   controlMaxPower = () => {
