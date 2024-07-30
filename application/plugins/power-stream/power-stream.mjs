@@ -59,16 +59,24 @@ class PowerStream {
     }
   }
 
+  prepareDeviceResponse = (device) => ({
+    id: this.sockets.devices[device].id,
+    device_name: this.sockets.devices[device].device_name,
+    device_ip: this.sockets.devices[device].device_ip,
+    active_power: this.sockets.devices[device].active_power,
+    active_status: this.sockets.devices[device].active_status,
+    max_power: this.sockets.devices[device].max_power,
+    priority_group: this.sockets.devices[device].priority_group,
+  })
+
   getDevices = async () => {
-    return Object.keys(this.sockets.devices).map(device => ({
-      id: this.sockets.devices[device].id,
-      device_name: this.sockets.devices[device].device_name,
-      device_ip: this.sockets.devices[device].device_ip,
-      active_power: this.sockets.devices[device].active_power,
-      active_status: this.sockets.devices[device].active_status,
-      max_power: this.sockets.devices[device].max_power,
-      priority_group: this.sockets.devices[device].priority_group,
-    }))
+    return Object.keys(this.sockets.devices).map(device => this.prepareDeviceResponse(device))
+  }
+
+  editDevice = async (id, params = {}) => {
+    const device = this.sockets.devices[id];
+    device.editDevice(params)
+    return this.prepareDeviceResponse(device.id)
   }
 
   syncDb = () => {
@@ -76,14 +84,15 @@ class PowerStream {
       Object.keys(this.sockets.devices).map(device => {
         const item = this.sockets.devices[device]
         const str = `
-          INSERT INTO devices (device_type, device_name, max_power, active_status, device_ip)
-          VALUES ('socket', '${item.id}', ${item.max_power}, ${item.active_status}, '${item.device_ip}')
+          INSERT INTO devices (device_type, device_name, max_power, active_status, device_ip, priority_group)
+          VALUES ('socket', '${item.id}', ${item.max_power}, ${item.active_status}, '${item.device_ip}', '${item.priority_group}')
           ON CONFLICT (device_name)
           DO UPDATE SET 
           device_type = 'socket',
           max_power = ${item.max_power},
           active_status = ${item.active_status},
-          device_ip = '${item.device_ip}'
+          device_ip = '${item.device_ip}',
+          priority_group = '${item.priority_group}'
         `;
         this.pg.query(str)
       })
@@ -338,7 +347,7 @@ class PowerStream {
   smartControl = () => {
     setInterval(() => {
 
-      // if (process.env.ACTIVE_STREAM === 'false') return;
+      if (process.env.ACTIVE_STREAM === 'false') return;
       console.log('🎈🎈🎈🎈🎈🎈🎈 Iteration 🎈🎈🎈🎈🎈🎈🎈🎈🎈')
       console.log(this.cmd)
 

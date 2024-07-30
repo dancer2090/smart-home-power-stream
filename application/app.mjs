@@ -38,12 +38,15 @@ const schemaMerc = `
     invertor: Invertor!
   }
 
+  type Mutation {
+    device_edit(id: String, priority_group: Int): Device
+  }
+
 `
 
 const resolvers = {
-  Query: {
-    devices: async () => {}
-  }
+  Query: {},
+  Mutation: {}
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -92,6 +95,12 @@ export default async function appFramework() {
   }
   resolvers.Query.invertor = async () => {
     const invertor = await stream.getInvertor()
+    return invertor;
+  }
+
+  resolvers.Mutation.device_edit = async (_, obj) => {
+    const { id, priority_group } = obj;
+    const invertor = await stream.editDevice(id, { priority_group })
     return invertor;
   }
 

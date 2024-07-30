@@ -19,12 +19,6 @@ const LayoutApp = ({ children }) => {
       <Sider
         breakpoint="lg"
         collapsedWidth="0"
-        onBreakpoint={(broken) => {
-          console.log(broken);
-        }}
-        onCollapse={(collapsed, type) => {
-          console.log(collapsed, type);
-        }}
       >
         <div style={{ width: '100%', textAlign: 'center', padding: 15 }}>
           <img src="logo512.png" alt="logo" width={50}/>

@@ -5,8 +5,6 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { Client, cacheExchange, fetchExchange, Provider } from 'urql';
 
-
-console.log(`${process.env.REACT_APP_SERVER_IP}:${process.env.REACT_APP_SERVER_PORT}/graphql`)
 const client = new Client({
   url: `http://${process.env.REACT_APP_SERVER_IP}:${process.env.REACT_APP_SERVER_PORT}/graphql`,
   exchanges: [cacheExchange, fetchExchange],

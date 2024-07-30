@@ -2,40 +2,14 @@ import './App.css';
 import Devices from './components/Devices';
 import Invertor from './components/Invertor';
 import { useEffect } from 'react';
-import { gql, useQuery } from 'urql';
+import { useGetListDevices } from './queries/listDevices'
 import LayoutApp from './layout'
-
-const Query = gql`
-  query {
-    invertor {
-      ip
-      pv_power
-      pv_potential
-      load
-      grid_load
-      grid_status      
-    }
-
-    devices {
-      id
-      device_name
-      device_type
-      device_ip
-      max_power
-      active_power
-      active_status
-      priority_group
-    }
-  }
-`;
 
 let interval = null
 
 function App() {
 
-  const [result, reexecuteQuery] = useQuery({
-    query: Query,
-  });
+  const { result, reexecuteQuery } = useGetListDevices();
 
   const { data, error } = result;
   useEffect(() => {

@@ -131,6 +131,17 @@ class Device {
       this.stopTime = currentTimestamp()
     }
   }
+
+  editDevice = (params = {}) => {
+    // TODO: add parameters validation to device (create schema)
+    if (params.hasOwnProperty('priority_group')) {
+      this.priority_group = params.priority_group
+    }
+    return {
+      id: this.id,
+      priority_group: this.priority_group
+    }
+  }
 }
 
 export default Device;
