@@ -1,3 +1,5 @@
+import { modbusTcpRequest } from "../../../lib/modbus/index.mjs"
+
 export const ON_GRID = 'On-Grid'
 export const OFF_GRID = 'Off-Grid'
 export const BATTERY_CHARGE = 'Charge'
@@ -10,6 +12,7 @@ export const PARAM_GRID_STATUS = 'grid_status'
 export const PARAM_PV_POWER_POTENTIAL = 'pv_power_potential'
 export const PARAM_BATTERY_STATUS = 'battery_status'
 export const PARAM_LOAD_POWER = 'load_power'
+export const PARAM_SOLAR_RADIATION = 'solar_radiation'
 
 class Inverter {
   constructor() {
@@ -58,6 +61,13 @@ class Inverter {
         measure: 'W',
         key: 'Total Load Power',
         reset_value: 0,
+      },
+      [PARAM_SOLAR_RADIATION]: {
+        label: 'Solar Radiation',
+        value: 0,
+        measure: 'W/m2',
+        key: 'solar_radiation',
+        reset_value: 0,
       }
     }
 
@@ -65,8 +75,10 @@ class Inverter {
 
     this.RESET_TIMER = 120 * 1000
     this.AUTORESET_INTERVAL = 15 * 1000
+    this.SOLAR_RADIATION_INTERVAL = 5 * 1000
 
     this.autoreset()
+    this.initGetSolarRadiation()
   }
 
   setParameter = (name, value) => {
@@ -79,6 +91,21 @@ class Inverter {
 
   getAllParameters = () => {
     return this.params;
+  }
+
+  initGetSolarRadiation = () => {
+    try {
+      setInterval(async ()=> {
+        const radiation = await modbusTcpRequest({
+          host: process.env.MODBUS_TCP_SERVER,
+          port: process.env.MODBUS_TCP_PORT,
+          unitId: process.env.MODBUS_SOLAR_SENSOR_ID,
+        });
+        this.setParameter(PARAM_SOLAR_RADIATION, radiation)
+      }, this.SOLAR_RADIATION_INTERVAL)
+    } catch (error) {
+      console.log('fail to fetch solar radiation')
+    }
   }
 
   stream = (message) => {

@@ -31,6 +31,7 @@ const schemaMerc = `
     load: Int
     grid_load: Int
     grid_status: Boolean
+    solar_radiation: Int
   }
 
   type Query {

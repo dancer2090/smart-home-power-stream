@@ -9,6 +9,7 @@ import Inverter, {
   PARAM_GRID_POWER,
   PARAM_LOAD_POWER,
   PARAM_PV_POWER,
+  PARAM_SOLAR_RADIATION,
 } from './devices/inverter.mjs';
 import Tashmota from './devices/tashmota.mjs'
 
@@ -48,6 +49,7 @@ class PowerStream {
     const grid_status = this.isGrid()
     const grid_load = this.gridLoad()
     const load = this.homeLoad()
+    const solar_radiation = this.homeLoad()
 
     return {
       ip,
@@ -56,6 +58,7 @@ class PowerStream {
       load,
       grid_status,
       grid_load,
+      solar_radiation,
     }
   }
 
@@ -343,6 +346,8 @@ class PowerStream {
   gridLoad = () => this.inverter.params[PARAM_GRID_POWER].value
 
   homeLoad = () => this.inverter.params[PARAM_LOAD_POWER].value
+
+  solarRadiation = () => this.inverter.params[PARAM_SOLAR_RADIATION].value
 
   smartControl = () => {
     setInterval(() => {

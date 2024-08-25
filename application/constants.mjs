@@ -50,5 +50,17 @@ export const schema = {
       type: 'boolean',
       default: false,
     },
+    MODBUS_TCP_SERVER: {
+      type: 'string',
+      default: false,
+    },
+    MODBUS_TCP_PORT: {
+      type: 'number',
+      default: 502,
+    },
+    MODBUS_SOLAR_SENSOR_ID: {
+      type: 'number',
+      default: 111,
+    },
   }
 }
