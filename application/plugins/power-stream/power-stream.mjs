@@ -49,7 +49,7 @@ class PowerStream {
     const grid_status = this.isGrid()
     const grid_load = this.gridLoad()
     const load = this.homeLoad()
-    const solar_radiation = this.homeLoad()
+    const solar_radiation = this.solarRadiation()
 
     return {
       ip,

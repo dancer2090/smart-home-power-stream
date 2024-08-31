@@ -8,7 +8,8 @@ const GetDevicesListQuery = gql`
       pv_potential
       load
       grid_load
-      grid_status      
+      grid_status
+      solar_radiation      
     }
 
     devices {

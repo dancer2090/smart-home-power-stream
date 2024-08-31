@@ -34,6 +34,11 @@ const columns = [
     dataIndex: 'grid_status',
     key: 'grid_status',
   },
+  {
+    title: 'Solar Radiation',
+    dataIndex: 'solar_radiation',
+    key: 'solar_radiation',
+  },
 ];
 
 const Invertor = ({ invertor }) => {
@@ -45,9 +50,9 @@ const Invertor = ({ invertor }) => {
         if (column.key === 'grid_status') {
           return (
             <Column
-              title="Grid Status"
-              dataIndex="grid_status"
-              key="grid_status"
+              title={column.title}
+              dataIndex={column.dataIndex}
+              key={column.key}
               render={(grid_status) => (
                 <>
                   {grid_status ? <CheckCircleFilled style={{color: 'green', fontSize: 16}} /> : <CloseCircleFilled style={{color: 'red', fontSize: 16}} />} 
@@ -57,6 +62,22 @@ const Invertor = ({ invertor }) => {
           )
         }
 
+        if (column.key === 'solar_radiation') {
+          return (
+            <Column
+              title={column.title}
+              dataIndex={column.dataIndex}
+              key={column.key}
+              render={(solar_radiation) => (
+                <>
+                  {solar_radiation} W/m2
+                  <br />
+                  {Math.round(solar_radiation * 4920 / 1000 * 0.7)} W
+                </>
+              )}
+            />
+          )
+        }
         return (
           <Column
             title={column.title}

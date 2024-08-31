@@ -142,7 +142,8 @@ class Inverter {
         this.getParameter(PARAM_PV_POWER),
         this.getParameter(PARAM_GRID_POWER),
         this.getParameter(PARAM_GRID_STATUS),
-        this.getParameter(PARAM_LOAD_POWER)
+        this.getParameter(PARAM_LOAD_POWER),
+        this.getParameter(PARAM_SOLAR_RADIATION)
       ])
     } catch (error) {
       console.log(error)
