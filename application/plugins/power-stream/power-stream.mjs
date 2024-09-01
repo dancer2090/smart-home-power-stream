@@ -62,6 +62,22 @@ class PowerStream {
     }
   }
 
+  historyRecord = async () => {
+    setInterval(async () => {
+      const pv_power = this.pvPower()
+      const grid_status = this.isGrid()
+      const grid_load = this.gridLoad()
+      const load = this.homeLoad()
+      const solar_radiation = this.solarRadiation()
+      
+      const str = `
+        INSERT INTO history (pv_power, grid_status, grid_load, home_load, solar_radiation)
+        VALUES (${pv_power}, ${grid_status}, ${grid_load}, ${load}, ${solar_radiation})
+      `;
+      await this.pg.query(str);
+    }, 1 * 60 * 1000)
+  }
+
   prepareDeviceResponse = (device) => ({
     id: this.sockets.devices[device].id,
     device_name: this.sockets.devices[device].device_name,
@@ -381,6 +397,7 @@ class PowerStream {
   init = () => {
     this.syncDb()
     this.smartControl()
+    this.historyRecord()
     this.mqtt = new MQTT(process.env.MQTT_HOST, process.env.MQTT_PORT, this.on_message)
     this.mqtt.init()
   }

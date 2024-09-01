@@ -1,3 +1,5 @@
+SET timezone = 'UTC';
+
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE OR REPLACE FUNCTION update_modified_column()
@@ -18,4 +20,4 @@ CREATE TABLE IF NOT EXISTS devices (
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TRIGGER update_modified_time BEFORE UPDATE ON devices FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+CREATE OR REPLACE TRIGGER update_modified_time BEFORE UPDATE ON devices FOR EACH ROW EXECUTE PROCEDURE update_modified_column();

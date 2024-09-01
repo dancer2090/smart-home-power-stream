@@ -10,8 +10,12 @@ import Migrate from './migrate.mjs'
 import { schema } from './constants.mjs'
 import { fileURLToPath } from 'url';
 import path, { dirname } from 'path';
+import { getHistoryQuery } from './services/history.mjs'
 
 const schemaMerc = `
+  scalar DateTime
+    @specifiedBy(url: "https://scalars.graphql.org/andimarek/date-time")
+
   type Device {
     id: ID
     device_name: String
@@ -34,9 +38,20 @@ const schemaMerc = `
     solar_radiation: Int
   }
 
+  type History {
+    id: ID
+    pv_power: Int
+    load: Int
+    grid_load: Int
+    grid_status: Boolean
+    solar_radiation: Int
+    created_at: DateTime
+  }
+
   type Query {
     devices: [Device]!
     invertor: Invertor!
+    history: [History]!
   }
 
   type Mutation {
@@ -103,6 +118,13 @@ export default async function appFramework() {
     const { id, priority_group } = obj;
     const invertor = await stream.editDevice(id, { priority_group })
     return invertor;
+  }
+
+  resolvers.Query.history = async() => {
+    const sql = getHistoryQuery();
+    console.log(sql)
+    const history = await fastify.pg.query(sql)
+    return history.rows ?? [];
   }
 
   fastify.register(mercurius, {
