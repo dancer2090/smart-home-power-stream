@@ -1,34 +1,18 @@
-import './App.css';
-import Devices from './components/Devices';
-import Invertor from './components/Invertor';
-import { useEffect } from 'react';
-import { useGetListDevices } from './queries/listDevices'
+import React from 'react';
 import LayoutApp from './layout'
-
-let interval = null
+import { Route, Routes } from 'react-router-dom'
+import Charts from './pages/charts';
+import Main from './pages/main';
 
 function App() {
 
-  const { result, reexecuteQuery } = useGetListDevices();
-
-  const { data, error } = result;
-  useEffect(() => {
-    if (interval) return
-    
-    interval = setInterval(() => {
-      console.log('reexecute')
-      reexecuteQuery({ requestPolicy: 'network-only' })
-    }, 5000)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  if (error) return <p>Oh no... {error.message}</p>;
-
   return (
     <LayoutApp>
-      <Invertor invertor={data?.invertor} />
-      <br />
-      <Devices devices={data?.devices} />
+      <Routes>
+        <Route path='/' element={<Main />} />
+        <Route path='/powerStream' element={<Main />} />
+        <Route path="/charts" element={<Charts />} />
+      </Routes>      
     </LayoutApp>      
   );
 }

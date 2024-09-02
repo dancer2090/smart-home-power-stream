@@ -4,6 +4,7 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { Client, cacheExchange, fetchExchange, Provider } from 'urql';
+import { HashRouter as Router } from 'react-router-dom'
 
 const client = new Client({
   url: `http://${process.env.REACT_APP_SERVER_IP}:${process.env.REACT_APP_SERVER_PORT}/graphql`,
@@ -13,10 +14,11 @@ const client = new Client({
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    <Provider value={client}>
-      <App />
-    </Provider>
-    
+    <Router>
+      <Provider value={client}>
+        <App />
+      </Provider>   
+    </Router>     
   </React.StrictMode>
 );
 

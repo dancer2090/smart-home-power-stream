@@ -1,16 +1,33 @@
 import React from 'react';
-import { VideoCameraFilled } from '@ant-design/icons';
+import { BarChartOutlined, VideoCameraFilled } from '@ant-design/icons';
 import { Layout, Menu, theme } from 'antd';
+import { useNavigate } from 'react-router-dom'
 
 const { Content, Footer, Sider } = Layout;
-const items = [VideoCameraFilled].map(
-  (icon, index) => ({
-    key: 'power_stream',
-    icon: React.createElement(icon),
+const items = [
+  {
+    key: '',
+    icon: React.createElement(VideoCameraFilled),
     label: `Power Stream`,
-  }),
-);
+  },
+  {
+    key: 'charts',
+    icon: React.createElement(BarChartOutlined),
+    label: `Charts`,
+  }
+];
+
+
+
 const LayoutApp = ({ children }) => {
+
+  const navigate = useNavigate();
+
+  const onClick = (e) => {
+    console.log(e)
+    navigate('/' + e.key)
+  }
+
   const {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
@@ -24,7 +41,7 @@ const LayoutApp = ({ children }) => {
           <img src="logo512.png" alt="logo" width={50}/>
         </div>
         
-        <Menu theme="dark" mode="inline" defaultSelectedKeys={['4']} items={items} />
+        <Menu onClick={onClick} theme="dark" mode="inline" defaultSelectedKeys={['4']} items={items} />
       </Sider>
       <Layout>
         <Content

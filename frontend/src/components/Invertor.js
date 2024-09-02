@@ -1,5 +1,15 @@
 import { Table } from 'antd';
 import { CheckCircleFilled, CloseCircleFilled } from '@ant-design/icons';
+import SunCalc from 'suncalc';
+
+const Pmax = 4920; // W
+const Istc = 1000; // W/m2
+const toRadians = (deg) => deg * Math.PI / 180
+const degPannelToGround = 30
+
+const PannelAngle = toRadians(degPannelToGround) // 30 deg
+const latitude = 50.490445
+const longitude = 30.375822
 
 const { Column } = Table
 
@@ -63,6 +73,12 @@ const Invertor = ({ invertor }) => {
         }
 
         if (column.key === 'solar_radiation') {
+          const sunPosition = SunCalc.getPosition(new Date(), latitude, longitude)
+          const cosQ = Math.cos(PannelAngle);
+          const cosFi = 
+            Math.sin(toRadians(degPannelToGround)) * Math.cos(sunPosition.altitude)
+            + Math.cos(toRadians(degPannelToGround)) * Math.sin(sunPosition.altitude) *  Math.cos(sunPosition.azimuth - toRadians(28))
+
           return (
             <Column
               title={column.title}
@@ -72,7 +88,7 @@ const Invertor = ({ invertor }) => {
                 <>
                   {solar_radiation} W/m2
                   <br />
-                  {Math.round(solar_radiation * 4920 / 1000 * 0.7)} W
+                  {Math.round(Pmax * (solar_radiation * cosQ * cosFi / Istc) * 0.9)} W
                 </>
               )}
             />

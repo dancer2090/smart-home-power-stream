@@ -51,7 +51,7 @@ const schemaMerc = `
   type Query {
     devices: [Device]!
     invertor: Invertor!
-    history: [History]!
+    history(from: DateTime, to: DateTime): [History]!
   }
 
   type Mutation {
@@ -120,8 +120,8 @@ export default async function appFramework() {
     return invertor;
   }
 
-  resolvers.Query.history = async() => {
-    const sql = getHistoryQuery();
+  resolvers.Query.history = async (_, { from, to }) => {
+    const sql = getHistoryQuery({ from, to });
     console.log(sql)
     const history = await fastify.pg.query(sql)
     return history.rows ?? [];

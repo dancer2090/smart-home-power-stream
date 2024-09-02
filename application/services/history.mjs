@@ -17,10 +17,10 @@ export const addToHistoryQuery = ({
   return str;
 }
 
-export const getHistoryQuery = () => {
+export const getHistoryQuery = ({ from, to }) => {
   const str = `
     SELECT pv_power, grid_status, grid_load, home_load AS load, solar_radiation, created_at FROM history
-    WHERE created_at BETWEEN '${dayjs().utc().format('YYYY-MM-DD')}' AND '${dayjs().add(1, 'day').utc().format('YYYY-MM-DD')}'`
+    WHERE created_at BETWEEN '${from ? from : dayjs().utc().format('YYYY-MM-DD')}' AND '${to ? to : dayjs().add(1, 'day').utc().format('YYYY-MM-DD')}'`
   ;
   return str;
 }
