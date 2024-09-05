@@ -29,35 +29,53 @@ const prepareChart = (history, options) => {
         latitude,
         longitude,
       )
+
       const cosQ = cos(degPannelToGround);
       const cosFi = sin(degPannelToGround) * cos(sunPosition.altitude, 'radians')
         + cos(degPannelToGround) * sin(sunPosition.altitude, 'radians')
         * cos(
-          // Math.abs(
-            sunPosition.azimuth - convertDegToRadians(degPannelToNorth)
-          // )
+          (sunPosition.azimuth + 2 * Math.PI) - convertDegToRadians(degPannelToNorth)
           ,
           'radians'
         )
+        // (sunPosition.azimuth + 2 * Math.PI)
+        const Sunx = cos(sunPosition.altitude, 'radians') * sin(sunPosition.azimuth, 'radians')
+        const Suny = cos(sunPosition.altitude, 'radians') * cos(sunPosition.azimuth, 'radians')
+        const Sunz = sin(sunPosition.altitude, 'radians')
+        const Pannelx = sin(degPannelToGround) * sin(degPannelToNorth)
+        const Pannely = sin(degPannelToGround) * cos(degPannelToNorth)
+        const Pannelz = cos(degPannelToGround)
+
+        const cosFi2 = Math.abs(Sunx * Pannelx) + Math.abs(Suny * Pannely) + Math.abs(Sunz * Pannelz);
 
       return {
         time,
         ...item,
-        pv_calculated: Math.round(Pmax * (item.solar_radiation * cosQ * cosFi / Istc) * n),
+        // pv_calculated: Math.round(Pmax * (item.solar_radiation * cosQ * cosFi2 / Istc) * n),
+        pv_calculated: Math.round(Pmax * (item.solar_radiation * cosQ * (sunPosition.azimuth > 0 ? cosFi2 : 1) / Istc) * n),
         pv_power: item.grid_status ? item.pv_power : 0,
+        ...sunPosition,
       }
     })
 }
 
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    const item = payload[0].payload;
+    return (
+      <div>
+        {Object.keys(item).map(key => (
+          <p>{`${key} : ${item[key]}`}</p>
+        ))}
+      </div>
+    );
+  }
+
+  return null;
+};
+
 const Charts = () => {
-
-
-
-  
   const [date, setDate] = useState(dayjs().format('YYYY-MM-DD'))
-
-  console.log(date)
-
   const from = dayjs(date).startOf('day')
   const to = dayjs(date).add(1, 'day').startOf('day')
   const { result } = useGetHistory(from, to);
@@ -96,10 +114,8 @@ const Charts = () => {
       <p>Time - {currentTime()}</p>
       <DatePicker onChange={onChange} defaultValue={dayjs(date, 'YYYY-MM-DD')} />
       <div style={{ width: '100%', height: 600 }}>
-        {/* <ResponsiveContainer height="600"> */}
+        <ResponsiveContainer width="100%" height="100%">
           <LineChart
-            width={900}
-            height={600}
             data={data}
             margin={{
               top: 5,
@@ -111,12 +127,13 @@ const Charts = () => {
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="time" />
             <YAxis />
-            <Tooltip />
+            <Tooltip content={<CustomTooltip />} />
             <Legend />
             <Line type="monotone" dataKey="pv_power" stroke="#8884d8" dot={false} activeDot={false} />
             <Line type="monotone" dataKey="pv_calculated" stroke="#82ca9d" dot={false} activeDot={false} />
+            <Line type="monotone" dataKey="solar_radiation" stroke="red" dot={false} activeDot={false} />
           </LineChart>
-        {/* </ResponsiveContainer> */}
+        </ResponsiveContainer>
       </div>
     </>
   )

@@ -1,4 +1,7 @@
 import { modbusTcpRequest } from "../../../lib/modbus/index.mjs"
+import { cos, sin, convertDegToRadians } from '../../../lib/math.mjs';
+import SunCalc from 'suncalc';
+import dayjs, {  localDateTime } from '../../../lib/date.mjs';
 
 export const ON_GRID = 'On-Grid'
 export const OFF_GRID = 'Off-Grid'
@@ -77,6 +80,24 @@ class Inverter {
     this.AUTORESET_INTERVAL = 15 * 1000
     this.SOLAR_RADIATION_INTERVAL = 5 * 1000
 
+    const Pmax = 4920; // W
+    const Istc = 1000; // W/m2
+    const degPannelToGround = 30 // deg
+    const degPannelToNorth = 28 // deg
+    const latitude = 50.4902 // coordinates
+    const longitude = 30.3759 // coordinates
+    const n = 0.95 // loses
+
+    this.OPTIONS = { 
+      Pmax,
+      Istc,
+      degPannelToGround,
+      degPannelToNorth,
+      n,
+      latitude,
+      longitude
+    };
+
     this.autoreset()
     this.initGetSolarRadiation()
   }
@@ -134,16 +155,17 @@ class Inverter {
         this.setParameter(PARAM_LOAD_POWER, json[this.getParameter(PARAM_LOAD_POWER).key])
       }
 
-      this.culculate_pv_power_potential()
+      this.calculate_pv_power_potential()
 
       this.last_message_timestamp = new Date().getTime()
 
       console.table([
         this.getParameter(PARAM_PV_POWER),
+        this.getParameter(PARAM_PV_POWER_POTENTIAL),
+        this.getParameter(PARAM_SOLAR_RADIATION),
         this.getParameter(PARAM_GRID_POWER),
         this.getParameter(PARAM_GRID_STATUS),
         this.getParameter(PARAM_LOAD_POWER),
-        this.getParameter(PARAM_SOLAR_RADIATION)
       ])
     } catch (error) {
       console.log(error)
@@ -151,13 +173,41 @@ class Inverter {
     }
   }
 
-  culculate_pv_power_potential = () => {
+  radiationToPower = (solar_radiation) => {
+    const { Pmax, degPannelToGround, degPannelToNorth, latitude, longitude, Istc, n } = this.OPTIONS;
+    const time = localDateTime();
+    const sunPosition = SunCalc.getPosition(
+      new Date(time),
+      latitude,
+      longitude,
+    )
+
+    const cosQ = cos(degPannelToGround);
+    const Sunx = cos(sunPosition.altitude, 'radians') * sin(sunPosition.azimuth, 'radians')
+    const Suny = cos(sunPosition.altitude, 'radians') * cos(sunPosition.azimuth, 'radians')
+    const Sunz = sin(sunPosition.altitude, 'radians')
+    const Pannelx = sin(degPannelToGround) * sin(degPannelToNorth)
+    const Pannely = sin(degPannelToGround) * cos(degPannelToNorth)
+    const Pannelz = cos(degPannelToGround)
+
+    const cosFi2 = Math.abs(Sunx * Pannelx) + Math.abs(Suny * Pannely) + Math.abs(Sunz * Pannelz);
+    return Math.round(
+      Pmax 
+      * (solar_radiation * cosQ * (sunPosition.azimuth > 0 ? cosFi2 : 1) / Istc)
+      * n
+    );
+  }
+
+  calculate_pv_power_potential = () => {
     try {
-      if (this.getParameter(PARAM_GRID_STATUS).value == ON_GRID) {
+      if (this.getParameter(PARAM_GRID_STATUS).value === ON_GRID) {
         this.setParameter(PARAM_PV_POWER_POTENTIAL, this.getParameter(PARAM_PV_POWER).value)
+      } else if (this.getParameter(PARAM_GRID_STATUS).value === OFF_GRID) {
+        const pv_caclucated = this.radiationToPower(this.getParameter(PARAM_SOLAR_RADIATION).value) ?? 0;
+        this.setParameter(PARAM_PV_POWER_POTENTIAL, pv_caclucated)
       } else {
         this.setParameter(PARAM_PV_POWER_POTENTIAL, 0)
-      }      
+      }    
     } catch (error) {
       console.log(error)
       console.log('Fail to Culculate Power Potential')

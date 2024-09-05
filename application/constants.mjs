@@ -50,6 +50,10 @@ export const schema = {
       type: 'boolean',
       default: false,
     },
+    LOG_HISTORY: {
+      type: 'boolean',
+      default: false,
+    },
     MODBUS_TCP_SERVER: {
       type: 'string',
       default: false,

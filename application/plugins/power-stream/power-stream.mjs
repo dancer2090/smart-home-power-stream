@@ -63,6 +63,8 @@ class PowerStream {
   }
 
   historyRecord = async () => {
+    if (process.env.LOG_HISTORY === 'false') return
+    console.log('log history')
     setInterval(async () => {
       const pv_power = this.pvPower()
       const grid_status = this.isGrid()
