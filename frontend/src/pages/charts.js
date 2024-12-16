@@ -99,6 +99,13 @@ const Charts = () => {
 
   const data = prepareChart(result?.data?.history ?? [], options)
 
+  const diff = data
+    .filter(item => item.pv_power > 1700)
+    .map(item => item.pv_calculated * 100 / item.pv_power)
+    .sort((a, b) => a > b)
+
+  console.log(diff[0], diff[diff.length - 1])
+
   const onChange = (date, dateString) => {
     setDate(dateString);
   }

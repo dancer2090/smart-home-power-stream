@@ -20,4 +20,14 @@ export const localDateTime = () => {
   return dayjs().tz('Europe/Kiev').format('YYYY-MM-DDTHH:mm:ss')
 }
 
+export const isTimeInNightTariff = () => {
+  const currentTime = new Date().toLocaleString("en-US", { timeZone: "Europe/Kiev" });
+  const date = new Date(currentTime);
+
+  const currentHour = date.getHours();
+
+  // From 23:00 to 7:00
+  return currentHour >= 23 || currentHour < 7;
+}
+
 export default dayjs;

@@ -1,5 +1,6 @@
 import MQTT from '../../lib/mqtt-sh.mjs';
 import { currentTimestamp } from '../../lib/helper.mjs'
+import { isTimeInNightTariff } from '../../lib/date.mjs'
 import { v4 as uuidv4 } from 'uuid';
 
 import Inverter, {
@@ -34,7 +35,7 @@ class PowerStream {
     this.sockets = new Tashmota(this.on_publish)
     this.cmd = null
     this.cmds = []
-    this.grid_buffer = 2000 // W
+    this.grid_buffer = 6000 // W
   }
 
   initDevices = async () => {
@@ -267,11 +268,20 @@ class PowerStream {
         this.isGrid() &&
         device.isDeviceOff()
       ) {
+
+        if (
+          isTimeInNightTariff()
+        ) {
+          this.runCmd(device.id, CMD_ACTIONS.DEVICE_ON)
+          return
+        }
+
         if (
           this.pvPotential() > device.max_power * 0.33 &&
           this.gridLoad() < this.grid_buffer
         ) {
           this.runCmd(device.id, CMD_ACTIONS.DEVICE_ON)
+          return
         }
         return
       }
@@ -280,18 +290,43 @@ class PowerStream {
         this.isGrid() &&
         device.isDeviceOn()
       ) {
+
+        if (
+          !isTimeInNightTariff()
+        ) {
+          this.runCmd(device.id, CMD_ACTIONS.DEVICE_OFF)
+          return
+        }
+
         if (this.gridLoad() > this.grid_buffer) {
           this.runCmd(device.id, CMD_ACTIONS.DEVICE_OFF)
         }
         return
       }
       
-      if (
-        !this.isGrid() &&
-        device.isDeviceOn()
-      ) {
-        this.runCmd(device.id, CMD_ACTIONS.DEVICE_OFF)
-        return
+      if (!this.isGrid()) {
+        if (device.isDeviceOn()) {
+
+          if (this.pvPotential() < device.max_power) {
+            this.runCmd(device.id, CMD_ACTIONS.DEVICE_OFF)
+            return
+          }
+
+          if (device.active_power > 0) {
+            if (this.pvPotential() < this.homeLoad()) {
+              this.runCmd(device.id, CMD_ACTIONS.DEVICE_OFF)
+              return;
+            }
+          }
+        }
+
+        if (device.isDeviceOff()) {
+          const available_power = this.pvPotential() - this.homeLoad();
+          if (available_power > device.max_power) {
+            this.runCmd(device.id, CMD_ACTIONS.DEVICE_ON)
+            return
+          }  
+        }
       }
     })
   }
@@ -341,17 +376,46 @@ class PowerStream {
    */
   controlPriorityGroupFour = () => {
     const devices_group = this.sockets.getDevicesByPriorityGroup(4)
-    for (const key of Object.keys(devices_group)) {
+    const sortedDevices = Object.keys(devices_group).sort((a, b) => devices_group[a].max_power - devices_group[b].max_power)
+
+    for (const key of sortedDevices) {
       const device = devices_group[key]
       if (this.isGrid() && !device.isDeviceOn()) {
         this.runCmd(device.id, CMD_ACTIONS.DEVICE_ON)
         break
       }
-      
-      if (!this.isGrid() && device.isDeviceOn()) {
-        this.runCmd(device.id, CMD_ACTIONS.DEVICE_OFF)
-        break
+
+      if (!this.isGrid()) {
+
+        if (device.isDeviceOn()) {
+
+          if (this.pvPotential() < device.max_power) {
+            this.runCmd(device.id, CMD_ACTIONS.DEVICE_OFF)
+            break
+          }
+
+          if (device.active_power > 0) {
+            if (this.pvPotential() < this.homeLoad()) {
+              this.runCmd(device.id, CMD_ACTIONS.DEVICE_OFF)
+              break
+            }
+          }
+        
+        }
+
+        if (device.isDeviceOff()) {
+
+          const available_power = this.pvPotential() - this.homeLoad();
+          
+          if (available_power > device.max_power) {
+            this.runCmd(device.id, CMD_ACTIONS.DEVICE_ON)
+            break
+          }
+
+        }
+
       }
+      
     }
   }
 
@@ -370,7 +434,7 @@ class PowerStream {
   smartControl = () => {
     setInterval(() => {
 
-      if (process.env.ACTIVE_STREAM === 'false') return;
+      // if (process.env.ACTIVE_STREAM === 'false') return;
       console.log('🎈🎈🎈🎈🎈🎈🎈 Iteration 🎈🎈🎈🎈🎈🎈🎈🎈🎈')
       console.log(this.cmd)
 
