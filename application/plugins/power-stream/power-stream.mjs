@@ -237,8 +237,8 @@ class PowerStream {
   controlPriorityGroupOne = () => {
     const devices_group = this.sockets.getDevicesByPriorityGroup(1)
 
-    Object.keys(devices_group).forEach(key => {
-      const device = devices_group[key];
+    for (const key of Object.keys(devices_group)) {
+      const device = devices_group[key]
       if (this.isGrid() && !device.isDeviceOn()) {
         this.runCmd(device.id, CMD_ACTIONS.DEVICE_ON)
         return
@@ -248,7 +248,7 @@ class PowerStream {
         this.runCmd(device.id, CMD_ACTIONS.DEVICE_OFF)
         return
       }
-    })
+    }
   }
 
   /**
@@ -262,7 +262,7 @@ class PowerStream {
    */
   controlPriorityGroupTwo = () => {
     const devices_group = this.sockets.getDevicesByPriorityGroup(2)
-    Object.keys(devices_group).forEach(key => {
+    for (const key of Object.keys(devices_group)) {
       const device = devices_group[key];
       if (
         this.isGrid() &&
@@ -276,13 +276,13 @@ class PowerStream {
           return
         }
 
-        if (
-          this.pvPotential() > device.max_power * 0.33 &&
-          this.gridLoad() < this.grid_buffer
-        ) {
-          this.runCmd(device.id, CMD_ACTIONS.DEVICE_ON)
-          return
-        }
+        // if (
+        //   this.pvPotential() > device.max_power * 0.33 &&
+        //   this.gridLoad() < this.grid_buffer
+        // ) {
+        //   this.runCmd(device.id, CMD_ACTIONS.DEVICE_ON)
+        //   return
+        // }
         return
       }
 
@@ -328,7 +328,7 @@ class PowerStream {
           }  
         }
       }
-    })
+    }
   }
 
   /**
@@ -380,10 +380,15 @@ class PowerStream {
 
     for (const key of sortedDevices) {
       const device = devices_group[key]
-      if (this.isGrid() && !device.isDeviceOn()) {
+      if (this.isGrid() && device.isDeviceOff()) {
         this.runCmd(device.id, CMD_ACTIONS.DEVICE_ON)
         break
       }
+
+      // if (!this.isGrid() && device.isDeviceOn()) {
+      //   this.runCmd(device.id, CMD_ACTIONS.DEVICE_OFF)
+      //   break
+      // }
 
       if (!this.isGrid()) {
 
