@@ -37,6 +37,11 @@ class PowerStream {
     this.cmd = null
     this.cmds = []
     this.grid_buffer = 6000 // W
+
+    // Independent per-device commands (priority group 5).
+    // { [device_id]: { action, timestamp } }
+    this.independentCmds = {}
+    this.INDEPENDENT_RETRY_INTERVAL = 30 * 1000
   }
 
   initDevices = async () => {
@@ -427,6 +432,54 @@ class PowerStream {
     }
   }
 
+  /**
+   * PRIORIRY_GROUP FIVE (Grid, independent)
+   * Same rule as group 1:
+   *   Grid On  -> On device
+   *   Grid Off -> Off device
+   * But every device is controlled independently: the command is sent to each
+   * device right away, without waiting for other devices to confirm, and
+   * without using the shared command queue. A glitchy socket never blocks the rest.
+   * Unconfirmed commands are re-sent every INDEPENDENT_RETRY_INTERVAL.
+   */
+  controlPriorityGroupFive = () => {
+    const devices_group = this.sockets.getDevicesByPriorityGroup(5)
+    const now = currentTimestamp()
+    const shouldBeOn = this.isGrid()
+
+    for (const key of Object.keys(devices_group)) {
+      const device = devices_group[key]
+      const pending = this.independentCmds[device.id]
+
+      // Device already in the desired state - nothing to do
+      if (device.isDeviceOn() === shouldBeOn) {
+        if (pending) delete this.independentCmds[device.id]
+        continue
+      }
+
+      const action = shouldBeOn ? CMD_ACTIONS.DEVICE_ON : CMD_ACTIONS.DEVICE_OFF
+
+      // Same command already sent and still waiting for confirmation
+      if (
+        pending &&
+        pending.action === action &&
+        (now - pending.timestamp) < this.INDEPENDENT_RETRY_INTERVAL
+      ) continue
+
+      if (pending && pending.action === action) {
+        console.log(`[group 5] ${device.id}: ${action} not confirmed, retrying`)
+      }
+
+      this.mqtt.publish(`mqtt/${device.id}/cmnd/Power`, shouldBeOn ? '1' : '0')
+      this.independentCmds[device.id] = { action, timestamp: now }
+    }
+
+    // Drop pending commands for devices that left group 5
+    for (const id of Object.keys(this.independentCmds)) {
+      if (!devices_group[id]) delete this.independentCmds[id]
+    }
+  }
+
   isGrid = () => this.inverter.params[PARAM_GRID_STATUS].value === ON_GRID
 
   pvPotential = () => this.inverter.params[PARAM_PV_POWER_POTENTIAL].value
@@ -447,6 +500,9 @@ class PowerStream {
       // if (process.env.ACTIVE_STREAM === 'false') return;
       console.log('🎈🎈🎈🎈🎈🎈🎈 Iteration 🎈🎈🎈🎈🎈🎈🎈🎈🎈')
       console.log(this.cmd)
+
+      // Independent group - does not depend on the shared command queue
+      if (this.mqtt) this.controlPriorityGroupFive()
 
       this.processCmd()
 
