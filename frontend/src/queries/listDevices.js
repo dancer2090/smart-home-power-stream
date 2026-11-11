@@ -4,6 +4,7 @@ const GetDevicesListQuery = gql`
   query {
     invertor {
       ip
+      battery_soc
       pv_power
       pv_potential
       load

@@ -20,6 +20,11 @@ const columns = [
     key: 'ip',
   },
   {
+    title: 'SOC',
+    dataIndex: 'battery_soc',
+    key: 'battery_soc',
+  },
+  {
     title: 'PV Power',
     dataIndex: 'pv_power',
     key: 'pv_power',
@@ -68,6 +73,17 @@ const Invertor = ({ invertor }) => {
                   {grid_status ? <CheckCircleFilled style={{color: 'green', fontSize: 16}} /> : <CloseCircleFilled style={{color: 'red', fontSize: 16}} />} 
                 </>
               )}
+            />
+          )
+        }
+
+        if (column.key === 'battery_soc') {
+          return (
+            <Column
+              title={column.title}
+              dataIndex={column.dataIndex}
+              key={column.key}
+              render={(battery_soc) => (battery_soc ?? null) === null ? '—' : `${battery_soc} %`}
             />
           )
         }

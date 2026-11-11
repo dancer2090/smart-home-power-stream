@@ -16,6 +16,7 @@ export const PARAM_PV_POWER_POTENTIAL = 'pv_power_potential'
 export const PARAM_BATTERY_STATUS = 'battery_status'
 export const PARAM_LOAD_POWER = 'load_power'
 export const PARAM_SOLAR_RADIATION = 'solar_radiation'
+export const PARAM_BATTERY_SOC = 'battery_soc'
 
 class Inverter {
   constructor() {
@@ -71,7 +72,14 @@ class Inverter {
         measure: 'W/m2',
         key: 'solar_radiation',
         reset_value: 0,
-      }
+      },
+      [PARAM_BATTERY_SOC]: {
+        label: 'Battery SOC',
+        value: null,
+        measure: '%',
+        key: 'Battery SOC',
+        reset_value: null,
+      },
     }
 
     this.last_message_timestamp = 0
@@ -155,6 +163,10 @@ class Inverter {
         this.setParameter(PARAM_LOAD_POWER, json[this.getParameter(PARAM_LOAD_POWER).key])
       }
 
+      if (Number.isInteger(json[this.getParameter(PARAM_BATTERY_SOC).key])) {
+        this.setParameter(PARAM_BATTERY_SOC, json[this.getParameter(PARAM_BATTERY_SOC).key])
+      }
+
       this.calculate_pv_power_potential()
 
       this.last_message_timestamp = new Date().getTime()
@@ -166,6 +178,7 @@ class Inverter {
         this.getParameter(PARAM_GRID_POWER),
         this.getParameter(PARAM_GRID_STATUS),
         this.getParameter(PARAM_LOAD_POWER),
+        this.getParameter(PARAM_BATTERY_SOC),
       ])
     } catch (error) {
       console.log(error)

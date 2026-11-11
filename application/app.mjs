@@ -31,6 +31,7 @@ const schemaMerc = `
   type Invertor {
     id: ID
     ip: String
+    battery_soc: Int
     pv_power: Int
     pv_potential: Int
     load: Int
@@ -137,5 +138,5 @@ export default async function appFramework() {
 
   await fastify.ready()
 
-  return fastify;
+  return fastify;д
 }
