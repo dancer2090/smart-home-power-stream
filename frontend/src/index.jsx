@@ -7,7 +7,7 @@ import { Client, cacheExchange, fetchExchange, Provider } from 'urql';
 import { HashRouter as Router } from 'react-router-dom'
 
 const client = new Client({
-  url: `http://${process.env.REACT_APP_SERVER_IP}:${process.env.REACT_APP_SERVER_PORT}/graphql`,
+  url: `http://${import.meta.env.REACT_APP_SERVER_IP}:${import.meta.env.REACT_APP_SERVER_PORT}/graphql`,
   exchanges: [cacheExchange, fetchExchange],
 });
 
