@@ -123,18 +123,18 @@ class Inverter {
   }
 
   initGetSolarRadiation = () => {
-    try {
-      setInterval(async ()=> {
+    setInterval(async () => {
+      try {
         const radiation = await modbusTcpRequest({
           host: process.env.MODBUS_TCP_SERVER,
           port: process.env.MODBUS_TCP_PORT,
           unitId: process.env.MODBUS_SOLAR_SENSOR_ID,
         });
         this.setParameter(PARAM_SOLAR_RADIATION, radiation)
-      }, this.SOLAR_RADIATION_INTERVAL)
-    } catch (error) {
-      console.log('fail to fetch solar radiation')
-    }
+      } catch (error) {
+        console.error('fail to fetch solar radiation:', error.message)
+      }
+    }, this.SOLAR_RADIATION_INTERVAL)
   }
 
   stream = (message) => {

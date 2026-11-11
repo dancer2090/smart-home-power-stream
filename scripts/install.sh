@@ -46,8 +46,37 @@ apt install sudo -y
 # PM2, Node
 apt install curl -y
 apt install git -y
-curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-sudo apt-get install -y nodejs
+apt install xz-utils -y
+
+NODE_MAJOR=22
+ARCH=$(uname -m)
+case "$ARCH" in
+  x86_64|aarch64|arm64)
+    curl -fsSL "https://deb.nodesource.com/setup_${NODE_MAJOR}.x" | sudo -E bash -
+    sudo apt-get install -y nodejs
+    ;;
+  armv7l|armv6l)
+    if [ "$ARCH" = "armv7l" ]; then
+      NODE_DIST="https://nodejs.org/dist/latest-v${NODE_MAJOR}.x"
+    else
+      NODE_DIST="https://unofficial-builds.nodejs.org/download/release/latest-v${NODE_MAJOR}.x"
+    fi
+    NODE_TARBALL=$(curl -fsSL "$NODE_DIST/" | grep -o "node-v[0-9.]*-linux-${ARCH}\.tar\.xz" | head -1)
+    if [ -z "$NODE_TARBALL" ]; then
+      echo "Node.js ${NODE_MAJOR} build for ${ARCH} not found at ${NODE_DIST}" >&2
+      exit 1
+    fi
+    curl -fsSL -o "/tmp/$NODE_TARBALL" "$NODE_DIST/$NODE_TARBALL"
+    sudo tar -xJf "/tmp/$NODE_TARBALL" -C /usr/local --strip-components=1 --exclude='*.md' --exclude=LICENSE
+    rm -f "/tmp/$NODE_TARBALL"
+    hash -r
+    ;;
+  *)
+    echo "Unsupported architecture: $ARCH" >&2
+    exit 1
+    ;;
+esac
+node -v && npm -v
 
 sudo npm install pm2 -g
 sudo pm2 status

@@ -81,10 +81,18 @@ export default async function appFramework() {
 
   // @fastify/env >= 5 no longer writes .env values into process.env,
   // but the app reads its config from process.env, so load the file here.
-  const envFile = is_production
-    ? path.join(__dirname, '..', '.env.production')
-    : path.resolve('.env')
-  if (existsSync(envFile)) process.loadEnvFile(envFile)
+  // Files are loaded in priority order; loadEnvFile never overrides a
+  // variable that is already set, so the first file that defines it wins.
+  const envFiles = [
+    ...(is_production ? [path.join(__dirname, '..', '.env.production')] : []),
+    path.join(__dirname, '..', '.env'),
+    path.join(__dirname, '.env'),
+  ]
+  const loadedEnvFiles = envFiles.filter(existsSync)
+  loadedEnvFiles.forEach((file) => process.loadEnvFile(file))
+  if (!loadedEnvFiles.length) {
+    console.warn(`No env file found, looked in: ${envFiles.join(', ')}`)
+  }
 
   // validates process.env against the schema
   await fastify.register(fastifyEnv, { schema })

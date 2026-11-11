@@ -5,7 +5,7 @@ apt update
 # SSH
 
 # PM2, Node
-curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+curl -sL https://deb.nodesource.com/setup_20.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
 sudo npm install pm2 -g
