@@ -83,7 +83,17 @@ const Invertor = ({ invertor }) => {
               title={column.title}
               dataIndex={column.dataIndex}
               key={column.key}
-              render={(battery_soc) => (battery_soc ?? null) === null ? '—' : `${battery_soc} %`}
+              render={(battery_soc, record) => {
+                const battery_power = record?.battery_power ?? null
+                const sign = battery_power > 0 ? '+' : ''
+                return (
+                  <>
+                    {(battery_soc ?? null) === null ? '—' : `${battery_soc} %`}
+                    <br />
+                    {battery_power === null ? '—' : `${sign}${battery_power} W`}
+                  </>
+                )
+              }}
             />
           )
         }

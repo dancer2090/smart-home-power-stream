@@ -32,6 +32,7 @@ const schemaMerc = `
     id: ID
     ip: String
     battery_soc: Int
+    battery_power: Int
     pv_power: Int
     pv_potential: Int
     load: Int

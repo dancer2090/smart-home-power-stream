@@ -126,6 +126,7 @@ const Devices = ({ devices }) => {
                 {/* <Select.Option value="3">3</Select.Option> */}
                 <Select.Option key={4} value={4}>4 - Active if grid OFF, solar ON</Select.Option>
                 <Select.Option key={5} value={5}>5 - Active if grid ON (independent)</Select.Option>
+                <Select.Option key={6} value={6}>6 - Boiler: grid ON and battery charged (independent)</Select.Option>
                 {/* <Select.Option value="5">5</Select.Option> */}
               </Select>
             </Form.Item>

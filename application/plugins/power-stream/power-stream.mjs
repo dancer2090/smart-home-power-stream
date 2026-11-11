@@ -12,6 +12,7 @@ import Inverter, {
   PARAM_PV_POWER,
   PARAM_SOLAR_RADIATION,
   PARAM_BATTERY_SOC,
+  PARAM_BATTERY_POWER,
 } from './devices/inverter.mjs';
 import Tashmota from './devices/tashmota.mjs'
 
@@ -42,6 +43,15 @@ class PowerStream {
     // { [device_id]: { action, timestamp } }
     this.independentCmds = {}
     this.INDEPENDENT_RETRY_INTERVAL = 30 * 1000
+    this.INDEPENDENT_GROUPS = [5, 6]
+
+    // Boiler (priority group 6)
+    // Deye reports charge as negative battery power -> flip it.
+    this.BATTERY_CHARGE_SIGN = -1
+    this.BOILER_ON_THRESHOLD = 300 // W, battery charge below -> battery is charged
+    this.BOILER_OFF_THRESHOLD = 1000 // W, battery charge above -> battery needs charging
+    this.BOILER_HOLD_TIME = 60 * 1000 // condition must hold this long
+    this.boiler = { lowSince: null, highSince: null }
   }
 
   initDevices = async () => {
@@ -58,10 +68,13 @@ class PowerStream {
     const load = this.homeLoad()
     const solar_radiation = this.solarRadiation()
     const battery_soc = this.batterySoc()
+    // "+" = charge, "-" = discharge
+    const battery_power = this.batteryChargePower()
 
     return {
       ip,
       battery_soc,
+      battery_power,
       pv_power,
       pv_potential,
       load,
@@ -444,39 +457,95 @@ class PowerStream {
    */
   controlPriorityGroupFive = () => {
     const devices_group = this.sockets.getDevicesByPriorityGroup(5)
-    const now = currentTimestamp()
     const shouldBeOn = this.isGrid()
 
     for (const key of Object.keys(devices_group)) {
-      const device = devices_group[key]
-      const pending = this.independentCmds[device.id]
+      this.setIndependentState(devices_group[key], shouldBeOn, 'group 5')
+    }
+  }
 
-      // Device already in the desired state - nothing to do
-      if (device.isDeviceOn() === shouldBeOn) {
-        if (pending) delete this.independentCmds[device.id]
-        continue
-      }
+  /**
+   * PRIORIRY_GROUP SIX (Grid, independent). Boiler
+   * Grid On
+   *    On device once the battery has finished charging:
+   *      battery power < BOILER_ON_THRESHOLD for BOILER_HOLD_TIME
+   *    Off device if the battery starts charging hard again:
+   *      battery power > BOILER_OFF_THRESHOLD for BOILER_HOLD_TIME
+   * Grid Off / no inverter data
+   *    Off device
+   * Controlled independently, same way as group 5.
+   */
+  controlPriorityGroupSix = () => {
+    const devices_group = this.sockets.getDevicesByPriorityGroup(6)
+    const now = currentTimestamp()
+    const battery_power = this.batteryChargePower()
 
-      const action = shouldBeOn ? CMD_ACTIONS.DEVICE_ON : CMD_ACTIONS.DEVICE_OFF
-
-      // Same command already sent and still waiting for confirmation
-      if (
-        pending &&
-        pending.action === action &&
-        (now - pending.timestamp) < this.INDEPENDENT_RETRY_INTERVAL
-      ) continue
-
-      if (pending && pending.action === action) {
-        console.log(`[group 5] ${device.id}: ${action} not confirmed, retrying`)
-      }
-
-      this.mqtt.publish(`mqtt/${device.id}/cmnd/Power`, shouldBeOn ? '1' : '0')
-      this.independentCmds[device.id] = { action, timestamp: now }
+    // Timers only make sense while grid is on and data is fresh.
+    // Reset them otherwise, so the boiler doesn't switch on right after
+    // grid comes back (battery was discharging -> "low" for a long time).
+    if (!this.isGrid() || battery_power === null) {
+      this.boiler.lowSince = null
+      this.boiler.highSince = null
+    } else {
+      this.boiler.lowSince = battery_power < this.BOILER_ON_THRESHOLD
+        ? (this.boiler.lowSince ?? now)
+        : null
+      this.boiler.highSince = battery_power > this.BOILER_OFF_THRESHOLD
+        ? (this.boiler.highSince ?? now)
+        : null
     }
 
-    // Drop pending commands for devices that left group 5
+    const isLow = this.boiler.lowSince !== null && (now - this.boiler.lowSince) >= this.BOILER_HOLD_TIME
+    const isHigh = this.boiler.highSince !== null && (now - this.boiler.highSince) >= this.BOILER_HOLD_TIME
+
+    for (const key of Object.keys(devices_group)) {
+      const device = devices_group[key]
+      let shouldBeOn
+
+      if (!this.isGrid() || battery_power === null) shouldBeOn = false
+      else if (device.isDeviceOn()) shouldBeOn = !isHigh
+      else shouldBeOn = isLow
+
+      this.setIndependentState(device, shouldBeOn, 'group 6')
+    }
+  }
+
+  /**
+   * Sends ON/OFF directly to the device, bypassing the shared command queue.
+   * Unconfirmed commands are re-sent every INDEPENDENT_RETRY_INTERVAL.
+   */
+  setIndependentState = (device, shouldBeOn, tag) => {
+    const now = currentTimestamp()
+    const pending = this.independentCmds[device.id]
+
+    // Device already in the desired state - nothing to do
+    if (device.isDeviceOn() === shouldBeOn) {
+      if (pending) delete this.independentCmds[device.id]
+      return
+    }
+
+    const action = shouldBeOn ? CMD_ACTIONS.DEVICE_ON : CMD_ACTIONS.DEVICE_OFF
+
+    // Same command already sent and still waiting for confirmation
+    if (
+      pending &&
+      pending.action === action &&
+      (now - pending.timestamp) < this.INDEPENDENT_RETRY_INTERVAL
+    ) return
+
+    if (pending && pending.action === action) {
+      console.log(`[${tag}] ${device.id}: ${action} not confirmed, retrying`)
+    }
+
+    this.mqtt.publish(`mqtt/${device.id}/cmnd/Power`, shouldBeOn ? '1' : '0')
+    this.independentCmds[device.id] = { action, timestamp: now }
+  }
+
+  // Drop pending commands for devices that left the independent groups
+  cleanupIndependentCmds = () => {
     for (const id of Object.keys(this.independentCmds)) {
-      if (!devices_group[id]) delete this.independentCmds[id]
+      const group = this.sockets.devices[id]?.priority_group
+      if (!this.INDEPENDENT_GROUPS.includes(group)) delete this.independentCmds[id]
     }
   }
 
@@ -494,6 +563,14 @@ class PowerStream {
 
   batterySoc = () => this.inverter.params[PARAM_BATTERY_SOC].value
 
+  batteryPower = () => this.inverter.params[PARAM_BATTERY_POWER].value
+
+  // Battery power normalized so that "+" = charge, "-" = discharge
+  batteryChargePower = () => {
+    const value = this.batteryPower()
+    return value === null ? null : value * this.BATTERY_CHARGE_SIGN
+  }
+
   smartControl = () => {
     setInterval(() => {
 
@@ -501,8 +578,12 @@ class PowerStream {
       console.log('🎈🎈🎈🎈🎈🎈🎈 Iteration 🎈🎈🎈🎈🎈🎈🎈🎈🎈')
       console.log(this.cmd)
 
-      // Independent group - does not depend on the shared command queue
-      if (this.mqtt) this.controlPriorityGroupFive()
+      // Independent groups - do not depend on the shared command queue
+      if (this.mqtt) {
+        this.controlPriorityGroupFive()
+        this.controlPriorityGroupSix()
+        this.cleanupIndependentCmds()
+      }
 
       this.processCmd()
 
