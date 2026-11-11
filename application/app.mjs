@@ -10,6 +10,7 @@ import Migrate from './migrate.mjs'
 import { schema } from './constants.mjs'
 import { fileURLToPath } from 'url';
 import path, { dirname } from 'path';
+import { existsSync } from 'fs';
 import { getHistoryQuery } from './services/history.mjs'
 
 const schemaMerc = `
@@ -77,15 +78,15 @@ export default async function appFramework() {
   
   await fastify.register(cors)
 
-  await fastify.register(
-    fastifyEnv,
-    { 
-      schema,
-      dotenv: is_production ? { 
-        path: `${__dirname}/../.env.production`
-      } : true
-    }
-  )
+  // @fastify/env >= 5 no longer writes .env values into process.env,
+  // but the app reads its config from process.env, so load the file here.
+  const envFile = is_production
+    ? path.join(__dirname, '..', '.env.production')
+    : path.resolve('.env')
+  if (existsSync(envFile)) process.loadEnvFile(envFile)
+
+  // validates process.env against the schema
+  await fastify.register(fastifyEnv, { schema })
 
   fastify.register(fastifyStatic, {
     root: path.join(__dirname, 'public'),
