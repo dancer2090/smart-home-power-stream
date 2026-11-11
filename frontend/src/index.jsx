@@ -6,8 +6,17 @@ import reportWebVitals from './reportWebVitals';
 import { Client, cacheExchange, fetchExchange, Provider } from 'urql';
 import { HashRouter as Router } from 'react-router-dom'
 
+const { REACT_APP_SERVER_IP, REACT_APP_SERVER_PORT } = import.meta.env
+
+// explicit backend address if configured, otherwise same origin as the page
+let graphqlUrl = '/api/graphql'
+if (REACT_APP_SERVER_IP) {
+  const port = REACT_APP_SERVER_PORT ? ':' + REACT_APP_SERVER_PORT : ''
+  graphqlUrl = `http://${REACT_APP_SERVER_IP}${port}/api/graphql`
+}
+
 const client = new Client({
-  url: `http://${import.meta.env.REACT_APP_SERVER_IP}:${import.meta.env.REACT_APP_SERVER_PORT}/graphql`,
+  url: graphqlUrl,
   exchanges: [cacheExchange, fetchExchange],
 });
 

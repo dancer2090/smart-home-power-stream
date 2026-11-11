@@ -140,6 +140,7 @@ export default async function appFramework() {
   fastify.register(mercurius, {
     schema: schemaMerc,
     resolvers,
+    path: '/api/graphql',
     graphiql: true,
     subscription: true,
   })
